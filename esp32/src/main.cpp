@@ -4,23 +4,27 @@
 #include <PubSubClient.h>
 #include <ESP32Servo.h>
 #include <LiquidCrystal_I2C.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <ArduinoJson.h>
 #include <time.h>
 #include "secretos.h"
 #include "certificado.h"
 
 #define PIN_PIR 19
-#define PIN_TRIG 12
+#define PIN_TRIG 25
 #define PIN_ECHO 14
 #define PIN_TACTIL 4
 #define PIN_SERVO 18
 #define PIN_RELE 13
 #define PIN_LED_VERDE 26
 #define PIN_LED_ROJO 27
+#define PIN_OLED_SDA 33
+#define PIN_OLED_SCL 32
 
 #define SERVO_CERRADO 0
 #define SERVO_ABIERTO 90
-#define DISTANCIA_PERSONA 50  // cm
+#define DISTANCIA_PERSONA 40  // cm
 
 const char* TOPIC_PRESENCIA = "sena/asistencia/presencia";
 const char* TOPIC_REGISTRO = "sena/asistencia/registro";
@@ -33,15 +37,23 @@ WiFiClientSecure clienteWifi;
 PubSubClient clienteMqtt(clienteWifi);
 Servo talanquera;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
+// la OLED va en su propio bus I2C: SDA en G33 y SCL en G32
+TwoWire busOled = TwoWire(1);
+Adafruit_SSD1306 pantalla(128, 64, &busOled, -1);
 
 bool asistenciaAbierta = true;
 int contadorPersonas = 0;
 bool personaCerca = false;
 int pirAnterior = LOW;
 int tactilAnterior = LOW;
+int tactilReposo = LOW;  // como lee el tactil cuando nadie lo toca
 unsigned long ultimaMedicion = 0;
+unsigned long ultimoAvisoCamara = 0;
 bool ledVerde = false;
 bool ledRojo = false;
+unsigned long ultimaHora = 0;
+bool dosPuntos = true;
+bool hayPantalla = false;
 
 void mostrar(String linea1, String linea2) {
   lcd.clear();
@@ -62,6 +74,8 @@ void mostrarEspera() {
 void conectarWifi() {
   mostrar("Conectando WiFi", WIFI_NOMBRE);
   WiFi.mode(WIFI_STA);
+  // menos potencia para que el USB alcance a alimentar todo
+  WiFi.setTxPower(WIFI_POWER_11dBm);
   WiFi.begin(WIFI_NOMBRE, WIFI_CLAVE);
   int intentos = 0;
   while (WiFi.status() != WL_CONNECTED) {
@@ -91,6 +105,17 @@ void sincronizarHora() {
   Serial.println(&hora, "\nHora: %d/%m/%Y %H:%M:%S");
 }
 
+// el rele se prende con HIGH y se apaga con LOW
+void prenderRele() {
+  pinMode(PIN_RELE, OUTPUT);
+  digitalWrite(PIN_RELE, HIGH);
+}
+
+void apagarRele() {
+  pinMode(PIN_RELE, OUTPUT);
+  digitalWrite(PIN_RELE, LOW);
+}
+
 // le avisa a la pagina como estan los led
 void publicarLeds() {
   JsonDocument estado;
@@ -110,7 +135,7 @@ void cambiarLeds(bool verde, bool rojo) {
 }
 
 void abrirTalanquera(String nombre, String estado) {
-  digitalWrite(PIN_RELE, HIGH);
+  prenderRele();
   talanquera.write(SERVO_ABIERTO);
   mostrar("Bienvenido", nombre);
   delay(1500);
@@ -134,7 +159,10 @@ void alRecibirMensaje(char* topic, byte* datos, unsigned int largo) {
       contadorPersonas = 0;
     } else if (mensaje == "CERRAR") {
       asistenciaAbierta = false;
-      digitalWrite(PIN_RELE, LOW);
+      apagarRele();
+    } else if (mensaje == "APAGAR_LUZ") {
+      // hora de salida, ya se fueron todos
+      apagarRele();
     }
     mostrarEspera();
     return;
@@ -203,18 +231,20 @@ long medirDistancia() {
   delayMicroseconds(10);
   digitalWrite(PIN_TRIG, LOW);
   long duracion = pulseIn(PIN_ECHO, HIGH, 30000);
-  if (duracion == 0) {
-    return 999;  // no hay nada cerca
+  long distancia = duracion * 0.034 / 2;
+  // el sensor no mide menos de 2 cm, si sale eso es un error
+  if (duracion == 0 || distancia < 2) {
+    return 999;
   }
-  return duracion * 0.034 / 2;
+  return distancia;
 }
 
 void revisarPir() {
   int pir = digitalRead(PIN_PIR);
-  if (pir == HIGH && pirAnterior == LOW) {
+  // el PIR solo saluda, la camara la prende el ultrasonico
+  if (pir == HIGH && pirAnterior == LOW && asistenciaAbierta) {
     Serial.println("PIR: presencia detectada");
-    clienteMqtt.publish(TOPIC_PRESENCIA, "DETECTADO");
-    mostrar("Hola!", "Mire la camara");
+    mostrar("Hola!", "Acerquese");
   }
   if (pir == LOW && pirAnterior == HIGH) {
     mostrarEspera();
@@ -224,8 +254,12 @@ void revisarPir() {
 
 void revisarTactil() {
   int tactil = digitalRead(PIN_TACTIL);
+  if (tactil != tactilAnterior) {
+    Serial.println("Tactil cambio a: " + String(tactil));
+  }
   // el tactil publica en control y el esp32 tambien lo escucha
-  if (tactil == HIGH && tactilAnterior == LOW) {
+  // cuenta como toque cuando pasa de reposo a tocado
+  if (tactil != tactilReposo && tactilAnterior == tactilReposo) {
     if (asistenciaAbierta) {
       clienteMqtt.publish(TOPIC_CONTROL, "CERRAR");
     } else {
@@ -242,15 +276,94 @@ void revisarUltrasonico() {
   ultimaMedicion = millis();
   long distancia = medirDistancia();
 
-  // cuenta cuando pasa de lejos a cerca
-  if (distancia < DISTANCIA_PERSONA && !personaCerca) {
-    personaCerca = true;
-    contadorPersonas++;
-    Serial.println("Personas contadas: " + String(contadorPersonas));
-    clienteMqtt.publish(TOPIC_CONTEO, String(contadorPersonas).c_str());
+  if (distancia < DISTANCIA_PERSONA) {
+    // mientras haya alguien cerca se le avisa a la camara cada 3 segundos
+    if (millis() - ultimoAvisoCamara > 3000) {
+      ultimoAvisoCamara = millis();
+      clienteMqtt.publish(TOPIC_PRESENCIA, "DETECTADO");
+    }
+    // se cuenta una sola vez cuando pasa de lejos a cerca
+    if (!personaCerca) {
+      personaCerca = true;
+      contadorPersonas++;
+      Serial.println("Ultrasonico: persona a " + String(distancia) + " cm, contadas: " + String(contadorPersonas));
+      clienteMqtt.publish(TOPIC_CONTEO, String(contadorPersonas).c_str());
+      mostrar("Hola!", "Mire la camara");
+    }
   } else if (distancia > DISTANCIA_PERSONA + 10) {
     personaCerca = false;
   }
+}
+
+// muestra la hora grande en la pantalla OLED, los dos puntos titilan cada segundo
+void mostrarHora() {
+  if (!hayPantalla || millis() - ultimaHora < 1000) {
+    return;
+  }
+  ultimaHora = millis();
+
+  struct tm hora;
+  if (!getLocalTime(&hora, 10)) {
+    return;
+  }
+  // formato de 12 horas: las 17:30 se ven 5:30
+  int horas = hora.tm_hour % 12;
+  if (horas == 0) {
+    horas = 12;
+  }
+  String manana = "a. m.";
+  if (hora.tm_hour >= 12) {
+    manana = "p. m.";
+  }
+
+  dosPuntos = !dosPuntos;
+  String separador = " ";
+  if (dosPuntos) {
+    separador = ":";
+  }
+  String minutos = String(hora.tm_min);
+  if (hora.tm_min < 10) {
+    minutos = "0" + minutos;
+  }
+  String texto = String(horas) + separador + minutos;
+
+  pantalla.clearDisplay();
+  pantalla.setTextColor(SSD1306_WHITE);
+  pantalla.setTextSize(1);
+  pantalla.setCursor(28, 0);
+  pantalla.print("AsistIA SENA");
+
+  // cada letra de tamano 4 mide 24 pixeles, asi se centra
+  pantalla.setTextSize(4);
+  pantalla.setCursor((128 - texto.length() * 24) / 2, 18);
+  pantalla.print(texto);
+
+  pantalla.setTextSize(1);
+  pantalla.setCursor(50, 56);
+  pantalla.print(manana);
+  pantalla.display();
+}
+
+// busca la OLED probando los cables en los dos ordenes y las dos direcciones
+bool buscarOled() {
+  int pinesSda[2] = {PIN_OLED_SDA, PIN_OLED_SCL};
+  int pinesScl[2] = {PIN_OLED_SCL, PIN_OLED_SDA};
+  byte direcciones[2] = {0x3C, 0x3D};
+
+  for (int i = 0; i < 2; i++) {
+    busOled.end();
+    busOled.begin(pinesSda[i], pinesScl[i]);
+    for (int j = 0; j < 2; j++) {
+      busOled.beginTransmission(direcciones[j]);
+      if (busOled.endTransmission() == 0) {
+        Serial.printf("OLED encontrada: SDA G%d, SCL G%d, direccion 0x%02X\n", pinesSda[i], pinesScl[i], direcciones[j]);
+        // false para que la libreria no vuelva a iniciar el bus con otros pines
+        return pantalla.begin(SSD1306_SWITCHCAPVCC, direcciones[j], true, false);
+      }
+    }
+  }
+  Serial.println("No se encontro la pantalla OLED, revisar cables y VCC");
+  return false;
 }
 
 void setup() {
@@ -260,20 +373,35 @@ void setup() {
   pinMode(PIN_TRIG, OUTPUT);
   pinMode(PIN_ECHO, INPUT_PULLDOWN);
   pinMode(PIN_TACTIL, INPUT_PULLDOWN);
-  pinMode(PIN_RELE, OUTPUT);
-  digitalWrite(PIN_RELE, LOW);
+  // algunos tactiles vienen al reves, por eso se lee como estan al arrancar
+  delay(100);
+  tactilReposo = digitalRead(PIN_TACTIL);
+  tactilAnterior = tactilReposo;
+  Serial.println("Tactil en reposo: " + String(tactilReposo));
+  apagarRele();
   pinMode(PIN_LED_VERDE, OUTPUT);
   pinMode(PIN_LED_ROJO, OUTPUT);
-
-  talanquera.setPeriodHertz(50);
-  talanquera.attach(PIN_SERVO, 500, 2400);
-  talanquera.write(SERVO_CERRADO);
 
   lcd.init();
   lcd.backlight();
 
+  if (buscarOled()) {
+    hayPantalla = true;
+    pantalla.clearDisplay();
+    pantalla.setTextColor(SSD1306_WHITE);
+    pantalla.setTextSize(1);
+    pantalla.setCursor(10, 28);
+    pantalla.print("Conectando WiFi...");
+    pantalla.display();
+  }
+
   conectarWifi();
   sincronizarHora();
+
+  // el servo se prende despues del wifi para que no pidan corriente al mismo tiempo
+  talanquera.setPeriodHertz(50);
+  talanquera.attach(PIN_SERVO, 500, 2400);
+  talanquera.write(SERVO_CERRADO);
 
   clienteWifi.setCACert(CERTIFICADO_CA);
   clienteMqtt.setServer(MQTT_HOST, MQTT_PUERTO);
@@ -290,4 +418,5 @@ void loop() {
   revisarPir();
   revisarTactil();
   revisarUltrasonico();
+  mostrarHora();
 }

@@ -2,6 +2,7 @@ import cv2
 import os
 
 TOTAL_FOTOS = 50
+TAMANO_MINIMO = 120  # caras mas pequenas no se guardan (estan lejos o son errores)
 
 nombre = input("Nombre del aprendiz (sin tildes): ").strip()
 carpeta = os.path.join("fotos", nombre)
@@ -20,7 +21,7 @@ while contador < TOTAL_FOTOS:
         break
 
     gris = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
-    caras = detector.detectMultiScale(gris, 1.3, 5)
+    caras = detector.detectMultiScale(gris, 1.3, 5, minSize=(TAMANO_MINIMO, TAMANO_MINIMO))
 
     # solo la primera cara
     for (x, y, w, h) in caras[:1]:

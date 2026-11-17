@@ -5,10 +5,11 @@ import * as cron from 'node-cron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { leerJson, guardarJson, leerNombres } from './archivos';
-import { analizarExcusa } from './gemini';
+import { analizarExcusa, analizarPermiso } from './gemini';
+import { enviarCorreo } from './correo';
 import {
-  HORA_APERTURA, HORA_INICIO, HORA_CIERRE, HORA_RECORDATORIO_ASEO, DIAS_CLASE, Registro, Asignado,
-  fechaHoy, formatoFecha, inicioSemana, fechaEnTexto, siguienteDiaClase, sortearAseo, crearExcel,
+  HORA_APERTURA, HORA_INICIO, HORA_CIERRE, HORA_RECORDATORIO_ASEO, HORA_SALIDA, DIAS_CLASE, Registro, Asignado,
+  fechaHoy, formatoFecha, inicioSemana, fechaEnTexto, siguienteDiaClase, sortearAseo, crearExcel, crearExcelPermiso, Permiso,
 } from './asistencia';
 
 const TOPIC_REGISTRO = 'sena/asistencia/registro';
@@ -28,15 +29,21 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   chatInstructor = Number(process.env.TELEGRAM_CHAT_INSTRUCTOR);
   chatGrupo = Number(process.env.TELEGRAM_GRUPO);
   leds = { verde: false, rojo: false };
+  // aprendices que estan pidiendo permiso, se guarda en que pregunta van
+  pidiendoPermiso: any = {};
 
   onModuleInit() {
     this.bot = new TelegramBot(process.env.TELEGRAM_TOKEN || '', { polling: true });
 
     this.bot.on('message', (mensaje) => {
       console.log(`Mensaje de ${mensaje.chat.id}: ${mensaje.text}`);
-      // si no es un comando puede ser una excusa
+      // si no es un comando puede ser la respuesta del permiso o una excusa
       if (mensaje.chat.type === 'private' && mensaje.text && !mensaje.text.startsWith('/')) {
-        this.recibirExcusa(mensaje.chat.id, mensaje.text);
+        if (this.pidiendoPermiso[mensaje.chat.id]) {
+          this.recibirPermiso(mensaje.chat.id, mensaje.text);
+        } else {
+          this.recibirExcusa(mensaje.chat.id, mensaje.text);
+        }
       }
     });
 
@@ -45,6 +52,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.on('callback_query', (boton) => {
       if (boton.data && boton.data.startsWith('excusa:')) {
         this.botonExcusa(boton);
+      } else if (boton.data && boton.data.startsWith('permiso:')) {
+        this.botonPermiso(boton);
       } else {
         this.elegirNombre(boton);
       }
@@ -54,6 +63,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.onText(/^\/aseo/, (mensaje) => this.comandoAseo(mensaje.chat.id));
     this.bot.onText(/^\/hoy/, (mensaje) => this.comandoHoy(mensaje.chat.id));
     this.bot.onText(/^\/excel/, (mensaje) => this.comandoExcel(mensaje.chat.id));
+    this.bot.onText(/^\/permiso/, (mensaje) => this.comandoPermiso(mensaje.chat.id));
 
     // abrir la asistencia
     const [horaAbrir, minutoAbrir] = HORA_APERTURA.split(':');
@@ -65,6 +75,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // cerrar la asistencia
     const [hora, minuto] = HORA_CIERRE.split(':');
     cron.schedule(`${minuto} ${hora} * * ${DIAS_CLASE.join(',')}`, () => this.cierreAutomatico());
+
+    // a la hora de salida se apaga la luz del salon (rele)
+    const [horaSalida, minutoSalida] = HORA_SALIDA.split(':');
+    cron.schedule(`${minutoSalida} ${horaSalida} * * ${DIAS_CLASE.join(',')}`, () => {
+      this.clienteMqtt.publish(TOPIC_CONTROL, 'APAGAR_LUZ', { qos: 1 });
+      console.log('Luz del salon apagada');
+    });
 
     // recordar el aseo
     const [horaAseo, minutoAseo] = HORA_RECORDATORIO_ASEO.split(':');
@@ -105,7 +122,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
       // si cierran desde el tactil tambien se cierra aca
       if (topic === TOPIC_CONTROL && mensaje === 'CERRAR') {
-        this.cerrarAsistencia();
+        this.cierreAutomatico();
       }
       if (topic == TOPIC_LED_ESTADO) {
         try {
@@ -293,6 +310,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       leds: this.leds,
       sorteo: aseo.find((a) => a.sorteadoEl == hoy) || null,
       excusas: leerJson('excusas.json', []).filter((e) => e.estado == 'PENDIENTE'),
+      permisos: leerJson('permisos.json', []).filter((p) => p.estado == 'PENDIENTE'),
     };
   }
 
@@ -363,6 +381,147 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  comandoPermiso(chatId: number) {
+    const aprendiz = this.buscarAprendiz(chatId);
+    if (!aprendiz) {
+      this.enviar(chatId, 'Primero registrate con /start.');
+      return;
+    }
+    this.pidiendoPermiso[chatId] = { paso: 'MOTIVO', motivo: '' };
+    this.enviar(chatId, 'Por que necesitas salir? Escribe el motivo.');
+  }
+
+  async recibirPermiso(chatId: number, texto: string) {
+    const permisoEnCurso = this.pidiendoPermiso[chatId];
+
+    if (permisoEnCurso.paso == 'MOTIVO') {
+      permisoEnCurso.motivo = texto;
+      permisoEnCurso.paso = 'HORA';
+      this.enviar(chatId, 'A que hora vas a salir? Escribela asi: 15:30');
+      return;
+    }
+
+    // la hora tiene que ser como 15:30
+    const horaSalida = texto.trim();
+    if (!/^[0-2]?[0-9]:[0-5][0-9]$/.test(horaSalida)) {
+      this.enviar(chatId, 'No entendi la hora. Escribela asi: 15:30');
+      return;
+    }
+    delete this.pidiendoPermiso[chatId];
+
+    const aprendiz = this.buscarAprendiz(chatId);
+    if (!aprendiz) {
+      return;
+    }
+    const permiso: Permiso = {
+      id: Date.now(),
+      chatId: chatId,
+      nombre: aprendiz.nombre,
+      fecha: fechaHoy(),
+      horaSolicitud: new Date().toTimeString().slice(0, 5),
+      horaSalida: horaSalida,
+      motivo: permisoEnCurso.motivo,
+      estado: 'PENDIENTE',
+    };
+    this.enviar(chatId, `Listo, tu permiso para salir a las ${horaSalida} fue enviado al instructor. Te aviso cuando responda.`);
+
+    // gemini le aconseja al instructor, pero el que decide es el instructor
+    const analisis = await analizarPermiso(permiso.nombre, permiso.motivo, permiso.horaSalida);
+    permiso.resumen = analisis.resumen;
+    permiso.sugerencia = analisis.sugerencia;
+    permiso.razon = analisis.razon;
+    permiso.motivoCompleto = analisis.motivo || permiso.motivo;
+
+    // al instructor le llega con los botones para decidir
+    if (this.chatInstructor) {
+      try {
+        const mensaje = await this.bot.sendMessage(this.chatInstructor, this.textoPermiso(permiso), {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: 'Aceptar', callback_data: `permiso:ACEPTADO:${permiso.id}` },
+              { text: 'Rechazar', callback_data: `permiso:RECHAZADO:${permiso.id}` },
+            ]],
+          },
+        });
+        permiso.mensajeId = mensaje.message_id;
+      } catch (error) {
+        console.log(`No se pudo enviar el permiso al instructor: ${error.message}`);
+      }
+    }
+    const permisos = leerJson('permisos.json', []);
+    permisos.push(permiso);
+    guardarJson('permisos.json', permisos);
+  }
+
+  // el excel se manda al correo cuando el instructor ya decidio
+  async enviarPermisoPorCorreo(permiso: Permiso) {
+    const ruta = await crearExcelPermiso(permiso);
+    try {
+      await enviarCorreo(
+        `Permiso de salida ${permiso.estado} - ${permiso.nombre}`,
+        `${permiso.nombre} pidio permiso para salir hoy ${permiso.fecha} a las ${permiso.horaSalida}.\n\n` +
+          `Motivo: ${permiso.motivoCompleto}\n\nDecision del instructor: ${permiso.estado}`,
+        ruta,
+      );
+      console.log(`Correo del permiso de ${permiso.nombre} enviado`);
+    } catch (error) {
+      console.log(`No se pudo enviar el correo: ${error.message}`);
+    }
+  }
+
+  textoPermiso(permiso: Permiso) {
+    let texto = `Permiso de salida de ${permiso.nombre} (${permiso.fecha})\n\n`;
+    texto += `Sale a las: ${permiso.horaSalida}\n`;
+    texto += `Motivo: ${permiso.motivo}\n\n`;
+    texto += `Resumen AsistIA: ${permiso.resumen}\n`;
+    texto += `AsistIA aconseja: ${permiso.sugerencia}`;
+    if (permiso.razon) {
+      texto += ` - ${permiso.razon}`;
+    }
+    return texto;
+  }
+
+  async botonPermiso(boton: TelegramBot.CallbackQuery) {
+    const partes = (boton.data || '').split(':');
+    let respuesta = 'Solo el instructor puede decidir';
+    if (this.esInstructor(boton.from.id)) {
+      respuesta = await this.decidirPermiso(Number(partes[2]), partes[1]);
+    }
+    this.bot.answerCallbackQuery(boton.id, { text: respuesta });
+  }
+
+  async decidirPermiso(id: number, decision: string) {
+    const permisos = leerJson('permisos.json', []);
+    const permiso = permisos.find((p) => p.id == id);
+    if (!permiso || permiso.estado != 'PENDIENTE') {
+      return 'Ese permiso ya fue revisado';
+    }
+    permiso.estado = decision;
+    guardarJson('permisos.json', permisos);
+
+    // sin await para que el boton responda rapido, el correo se demora
+    this.enviarPermisoPorCorreo(permiso);
+
+    let palabra = 'rechazado';
+    if (decision == 'ACEPTADO') {
+      palabra = 'aceptado';
+    }
+    await this.enviar(permiso.chatId, `Hola ${permiso.nombre}, tu permiso para salir a las ${permiso.horaSalida} fue ${palabra} por el instructor.`);
+
+    // se quitan los botones del mensaje del instructor
+    if (permiso.mensajeId) {
+      try {
+        await this.bot.editMessageText(`${this.textoPermiso(permiso)}\n\nDecision: ${decision}`, {
+          chat_id: this.chatInstructor,
+          message_id: permiso.mensajeId,
+        });
+      } catch (error) {
+        console.log(`No se pudo editar el mensaje: ${error.message}`);
+      }
+    }
+    return `Permiso de ${permiso.nombre} ${palabra}`;
+  }
+
   async recibirExcusa(chatId: number, texto: string) {
     const excusas = leerJson('excusas.json', []);
     const excusa = excusas.find((e) => e.chatId === chatId && e.estado === 'SIN_RESPUESTA');
@@ -414,9 +573,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     texto += `"${excusa.texto}"
 
 `;
-    texto += `Resumen IA: ${excusa.resumen}
+    texto += `Resumen AsistIA: ${excusa.resumen}
 `;
-    texto += `Sugerencia IA: ${excusa.sugerencia}`;
+    texto += `AsistIA aconseja: ${excusa.sugerencia}`;
     if (excusa.razon) {
       texto += ` - ${excusa.razon}`;
     }
@@ -682,6 +841,7 @@ Decision: ${decision}`, {
         '/start - Registrarte en AsistIA\n' +
         '/fallas - Cuantas fallas y llegadas tarde llevas\n' +
         '/aseo - Si te toca aseo, que dia y que tarea\n' +
+        '/permiso - Pedir permiso para salir temprano\n' +
         '/ayuda - Ver esta lista',
     );
   }

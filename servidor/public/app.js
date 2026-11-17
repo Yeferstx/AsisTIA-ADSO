@@ -43,6 +43,60 @@ function mostrarDatos(datos) {
 
   mostrarSorteo(datos.sorteo);
   mostrarExcusas(datos.excusas);
+  mostrarPermisos(datos.permisos);
+}
+
+function mostrarPermisos(permisos) {
+  document.getElementById('totalPermisos').textContent = permisos.length;
+  const lista = document.getElementById('listaPermisos');
+
+  // si no cambio nada no se vuelve a dibujar
+  const ids = permisos.map((permiso) => permiso.id).join(',');
+  if (lista.dataset.ids == ids && ids != '') {
+    return;
+  }
+  lista.dataset.ids = ids;
+
+  if (permisos.length == 0) {
+    lista.innerHTML = '<p class="vacio">No hay permisos por revisar</p>';
+    return;
+  }
+
+  let html = '';
+  for (const permiso of permisos) {
+    let claseSugerencia = 'sugerencia';
+    if (permiso.sugerencia == 'ACEPTAR') {
+      claseSugerencia = 'sugerencia valida';
+    } else if (permiso.sugerencia == 'RECHAZAR') {
+      claseSugerencia = 'sugerencia no-valida';
+    }
+
+    html += `
+      <div class="excusa">
+        <div class="excusa-cabecera">
+          <b>${limpiar(permiso.nombre)}</b>
+          <span class="hora-salida">Sale a las ${limpiar(permiso.horaSalida)}</span>
+        </div>
+        <p class="texto-excusa">"${limpiar(permiso.motivo)}"</p>
+        <div class="caja-ia">
+          <p class="titulo-ia">AsistIA aconseja</p>
+          <p>${limpiar(permiso.motivoCompleto)}</p>
+          <p><b>Aconseja:</b> <span class="${claseSugerencia}">${limpiar(permiso.sugerencia)}</span></p>
+          <p>${limpiar(permiso.razon)}</p>
+        </div>
+        <div class="decision">
+          <button class="boton-aceptar" onclick="decidirPermiso(${permiso.id}, 'ACEPTADO')">Aceptar</button>
+          <button class="boton-rechazar" onclick="decidirPermiso(${permiso.id}, 'RECHAZADO')">Rechazar</button>
+        </div>
+      </div>`;
+  }
+  lista.innerHTML = html;
+}
+
+async function decidirPermiso(id, decision) {
+  const respuesta = await enviarPost('/api/permiso', { id: id, decision: decision });
+  mostrarMensaje(respuesta.mensaje);
+  actualizar();
 }
 
 // para que lo que escriba el aprendiz no se meta como html
@@ -79,7 +133,7 @@ function mostrarExcusas(excusas) {
     if (excusa.resumen) {
       cajaIa = `
         <p><b>Resumen:</b> ${limpiar(excusa.resumen)}</p>
-        <p><b>Sugerencia:</b> <span class="${claseSugerencia}">${limpiar(excusa.sugerencia)}</span></p>
+        <p><b>Aconseja:</b> <span class="${claseSugerencia}">${limpiar(excusa.sugerencia)}</span></p>
         <p>${limpiar(excusa.razon)}</p>`;
     }
 
@@ -91,7 +145,7 @@ function mostrarExcusas(excusas) {
         </div>
         <p class="texto-excusa">"${limpiar(excusa.texto)}"</p>
         <div class="caja-ia">
-          <p class="titulo-ia">Gemini IA</p>
+          <p class="titulo-ia">AsistIA aconseja</p>
           ${cajaIa}
         </div>
         <div class="decision">

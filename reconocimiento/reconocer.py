@@ -8,9 +8,12 @@ import paho.mqtt.client as mqtt
 
 HORA_INICIO = "12:00"
 HORA_CORTE = "12:30"
-UMBRAL = 55  # entre mas bajo mas se parece
-VECES_PARA_CONFIRMAR = 5  # veces seguidas para confirmar
+UMBRAL = 50  # entre mas bajo mas se parece
+VECES_PARA_CONFIRMAR = 8  # veces seguidas para confirmar
+TAMANO_MINIMO = 120  # caras mas pequenas no se tienen en cuenta
 TOPIC_REGISTRO = "sena/asistencia/registro"
+TOPIC_PRESENCIA = "sena/asistencia/presencia"
+SEGUNDOS_CAMARA = 20  # si no ve a nadie en este tiempo se apaga la camara
 
 load_dotenv("../.env")
 
@@ -18,14 +21,26 @@ load_dotenv("../.env")
 def al_conectar(cliente, datos, banderas, codigo, propiedades):
     if codigo == 0:
         print("Conectado al broker MQTT")
+        cliente.subscribe(TOPIC_PRESENCIA)
     else:
         print(f"No se pudo conectar al broker: {codigo}")
+
+
+# cuando el ultrasonico del esp32 detecta a alguien se guarda la hora
+def al_recibir(cliente, datos, mensaje):
+    global ultima_presencia
+    if mensaje.payload.decode() == "DETECTADO":
+        ultima_presencia = time.time()
+
+
+ultima_presencia = 0
 
 
 cliente = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 cliente.username_pw_set(os.getenv("MQTT_USUARIO"), os.getenv("MQTT_CLAVE"))
 cliente.tls_set(ca_certs="../certificados/emqxsl-ca.crt")
 cliente.on_connect = al_conectar
+cliente.on_message = al_recibir
 cliente.connect(os.getenv("MQTT_HOST"), int(os.getenv("MQTT_PUERTO")))
 cliente.loop_start()
 
@@ -47,7 +62,7 @@ with open("nombres.txt", encoding="utf-8") as archivo:
     nombres = archivo.read().splitlines()
 
 detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-camara = cv2.VideoCapture(0)
+camara = None
 registrados = {}
 ultimo_desconocido = 0
 candidato = ""
@@ -61,16 +76,35 @@ def calcular_estado():
     return "TARDE"
 
 
-print(f"Clase: inicio {HORA_INICIO} - corte {HORA_CORTE}. ESC para salir.")
+print(f"Clase: inicio {HORA_INICIO} - corte {HORA_CORTE}. ESC o Ctrl + C para salir.")
+print("Esperando al sensor ultrasonico...")
 
 while True:
+    # la camara solo se prende cuando el ultrasonico detecta a alguien
+    if time.time() - ultima_presencia > SEGUNDOS_CAMARA:
+        if camara is not None:
+            camara.release()
+            cv2.destroyAllWindows()
+            camara = None
+            print("Camara apagada. Esperando al sensor ultrasonico...")
+        time.sleep(0.2)
+        continue
+
+    if camara is None:
+        print("Persona detectada, prendiendo la camara")
+        camara = cv2.VideoCapture(0)
+
     ok, imagen = camara.read()
     if not ok:
         print("No se pudo leer la camara")
         break
 
     gris = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
-    caras = detector.detectMultiScale(gris, 1.3, 5)
+    caras = detector.detectMultiScale(gris, 1.3, 5, minSize=(TAMANO_MINIMO, TAMANO_MINIMO))
+    if len(caras) > 0:
+        ultima_presencia = time.time()
+        # solo la cara mas grande, que es la de quien esta mas cerca
+        caras = [max(caras, key=lambda cara: cara[2])]
 
     for (x, y, w, h) in caras:
         rostro = cv2.resize(gris[y:y + h, x:x + w], (200, 200))
@@ -122,5 +156,6 @@ while True:
 
 cliente.loop_stop()
 cliente.disconnect()
-camara.release()
+if camara is not None:
+    camara.release()
 cv2.destroyAllWindows()

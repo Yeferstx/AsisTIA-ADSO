@@ -40,6 +40,15 @@ export class WebController {
     return { mensaje };
   }
 
+  @Post('permiso')
+  async permiso(@Body() datos: { id: number; decision: string }) {
+    if (datos.decision != 'ACEPTADO' && datos.decision != 'RECHAZADO') {
+      return { mensaje: 'Decision invalida' };
+    }
+    const mensaje = await this.servicio.decidirPermiso(datos.id, datos.decision);
+    return { mensaje };
+  }
+
   @Post('telegram')
   async telegram() {
     const seEnvio = await this.servicio.enviarTelegrams();

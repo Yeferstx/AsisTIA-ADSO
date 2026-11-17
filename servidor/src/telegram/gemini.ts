@@ -1,10 +1,11 @@
 // si el primero falla se prueba con el siguiente
-const MODELOS = ['gemini-flash-lite-latest', 'gemini-flash-latest'];
+const MODELOS = ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
 
 export interface Analisis {
   resumen: string;
-  sugerencia: string; // VALIDA, NO VALIDA o SIN_SUGERENCIA
+  sugerencia: string;
   razon: string;
+  motivo?: string; // el motivo del permiso bien redactado
 }
 
 export async function analizarExcusa(nombre: string, texto: string) {
@@ -15,7 +16,24 @@ export async function analizarExcusa(nombre: string, texto: string) {
     'No son validas: quedarse dormido, pereza, planes personales o excusas sin explicacion.\n' +
     'Responde solo con este JSON: {"resumen": "...", "sugerencia": "VALIDA" o "NO VALIDA", "razon": "..."}\n\n' +
     `Aprendiz: ${nombre}\nExcusa: ${texto}`;
+  return preguntarGemini(instruccion);
+}
 
+export async function analizarPermiso(nombre: string, motivo: string, horaSalida: string) {
+  const instruccion =
+    'Eres el asistente de un instructor del SENA. La clase es de 12:30 a 17:30.\n' +
+    'Un aprendiz pide permiso para salir antes de que termine la clase.\n' +
+    'Haz un resumen corto (maximo 20 palabras) y sugiere si el instructor deberia ACEPTAR o RECHAZAR el permiso.\n' +
+    'Se aceptan: citas medicas, salud, calamidad familiar, tramites obligatorios o trabajo con soporte.\n' +
+    'Se rechazan: planes personales, cansancio, motivos sin explicacion o si sale demasiado temprano sin una razon fuerte.\n' +
+    'Ademas redacta el motivo de forma clara, formal y completa (2 o 3 oraciones, en tercera persona), ' +
+    'corrigiendo la ortografia. No inventes datos que el aprendiz no dijo.\n' +
+    'Responde solo con este JSON: {"resumen": "...", "sugerencia": "ACEPTAR" o "RECHAZAR", "razon": "...", "motivo": "..."}\n\n' +
+    `Aprendiz: ${nombre}\nHora de salida: ${horaSalida}\nMotivo: ${motivo}`;
+  return preguntarGemini(instruccion);
+}
+
+async function preguntarGemini(instruccion: string) {
   for (const modelo of MODELOS) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
@@ -39,7 +57,7 @@ export async function analizarExcusa(nombre: string, texto: string) {
       }
       console.log(`Error de Gemini (${modelo}):`, datos.error ? datos.error.message : respuesta.status);
     } catch (error) {
-      console.log(`No se pudo analizar la excusa con ${modelo}:`, error.message);
+      console.log(`No se pudo usar Gemini con ${modelo}:`, error.message);
     }
   }
   return sinAnalisis();

@@ -4,17 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AsistIA SENA</title>
+  <link rel="icon" href="img/asistia.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
   <header>
     <div class="marca">
-      <div class="logo">A</div>
+      <img src="img/asistia.png" alt="AsistIA" class="logo">
       <div>
-        <h1>AsistIA <span>SENA</span></h1>
-        <p>Ficha 3237831 - Equipo XchanGo</p>
+        <h1>Asist<span>IA</span></h1>
+        <p>SENA - Ficha 3237831 - Equipo XchanGo</p>
       </div>
     </div>
     <div class="cabecera-derecha">
@@ -24,10 +25,17 @@
   </header>
 
   <main>
-    <div class="barra-estado">
-      <span id="fecha">Cargando...</span>
-      <span id="estadoAsistencia" class="etiqueta">-</span>
-    </div>
+    <section class="bienvenida">
+      <div class="bienvenida-texto">
+        <h2>Hola, soy Asist<span>IA</span></h2>
+        <p>Llevo la asistencia de la ficha, aviso por Telegram y le ayudo al instructor con las excusas y los permisos.</p>
+        <div class="barra-estado">
+          <span id="fecha" class="fecha">Cargando...</span>
+          <span id="estadoAsistencia" class="etiqueta">-</span>
+        </div>
+      </div>
+      <img src="img/asistia.png" alt="Mascota AsistIA" class="mascota">
+    </section>
 
     <section class="resumen">
       <div class="cuadro cuadro-verde">
@@ -111,10 +119,17 @@
     </div>
 
     <section class="tarjeta">
+      <h2>Permisos de salida <span id="totalPermisos" class="contador">0</span></h2>
+      <div id="listaPermisos" class="lista-excusas"></div>
+    </section>
+
+    <section class="tarjeta separada">
       <h2>Excusas por revisar <span id="totalExcusas" class="contador">0</span></h2>
       <div id="listaExcusas" class="lista-excusas"></div>
     </section>
   </main>
+
+  <footer>AsistIA SENA - Analisis y Desarrollo de Software</footer>
 
   <div id="aviso" class="aviso"></div>
 
