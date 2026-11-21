@@ -4,18 +4,17 @@ import * as mqtt from 'mqtt';
 import * as cron from 'node-cron';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as tls from 'tls';
 import { leerJson, guardarJson, leerNombres } from './archivos';
-import { analizarExcusa, analizarPermiso } from './gemini';
+import { analizarExcusa, analizarPermiso, responderPregunta } from './gemini';
 import { enviarCorreo } from './correo';
 import {
-  HORA_APERTURA, HORA_INICIO, HORA_CIERRE, HORA_RECORDATORIO_ASEO, HORA_SALIDA, DIAS_CLASE, Registro, Asignado,
+  HORA_RECORDATORIO_ASEO, DIAS_CLASE, Registro, Asignado, Horario, leerHorario,
   fechaHoy, formatoFecha, inicioSemana, fechaEnTexto, siguienteDiaClase, sortearAseo, crearExcel, crearExcelPermiso, Permiso,
 } from './asistencia';
 
 const TOPIC_REGISTRO = 'sena/asistencia/registro';
 const TOPIC_CONTROL = 'sena/asistencia/control';
-const TOPIC_LED = 'sena/asistencia/led';
-const TOPIC_LED_ESTADO = 'sena/asistencia/led/estado';
 
 interface Aprendiz {
   nombre: string;
@@ -28,7 +27,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   clienteMqtt: mqtt.MqttClient;
   chatInstructor = Number(process.env.TELEGRAM_CHAT_INSTRUCTOR);
   chatGrupo = Number(process.env.TELEGRAM_GRUPO);
-  leds = { verde: false, rojo: false };
   // aprendices que estan pidiendo permiso, se guarda en que pregunta van
   pidiendoPermiso: any = {};
 
@@ -65,30 +63,31 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.onText(/^\/excel/, (mensaje) => this.comandoExcel(mensaje.chat.id));
     this.bot.onText(/^\/permiso/, (mensaje) => this.comandoPermiso(mensaje.chat.id));
 
-    // abrir la asistencia
-    const [horaAbrir, minutoAbrir] = HORA_APERTURA.split(':');
-    cron.schedule(`${minutoAbrir} ${horaAbrir} * * ${DIAS_CLASE.join(',')}`, () => {
-      this.clienteMqtt.publish(TOPIC_CONTROL, 'ABRIR', { qos: 1 });
-      console.log('Asistencia abierta');
-    });
-
-    // cerrar la asistencia
-    const [hora, minuto] = HORA_CIERRE.split(':');
-    cron.schedule(`${minuto} ${hora} * * ${DIAS_CLASE.join(',')}`, () => this.cierreAutomatico());
-
-    // a la hora de salida se apaga la luz del salon (rele)
-    const [horaSalida, minutoSalida] = HORA_SALIDA.split(':');
-    cron.schedule(`${minutoSalida} ${horaSalida} * * ${DIAS_CLASE.join(',')}`, () => {
-      this.clienteMqtt.publish(TOPIC_CONTROL, 'APAGAR_LUZ', { qos: 1 });
-      console.log('Luz del salon apagada');
-    });
-
-    // recordar el aseo
-    const [horaAseo, minutoAseo] = HORA_RECORDATORIO_ASEO.split(':');
-    cron.schedule(`${minutoAseo} ${horaAseo} * * ${DIAS_CLASE.join(',')}`, () => this.recordarAseo());
+    // cada minuto se revisa el horario, asi si el instructor lo cambia en la pagina se usa de una vez
+    cron.schedule(`* * * * ${DIAS_CLASE.join(',')}`, () => this.revisarHorario());
 
     this.conectarMqtt();
     console.log('Bot de Telegram iniciado');
+  }
+
+  revisarHorario() {
+    const horario = leerHorario();
+    const ahora = new Date().toTimeString().slice(0, 5);
+    if (ahora == horario.apertura) {
+      this.clienteMqtt.publish(TOPIC_CONTROL, 'ABRIR', { qos: 1 });
+      console.log('Asistencia abierta');
+    }
+    // a la hora de salida se apaga la luz del salon (rele)
+    if (ahora == horario.salida) {
+      this.clienteMqtt.publish(TOPIC_CONTROL, 'APAGAR_LUZ', { qos: 1 });
+      console.log('Luz del salon apagada');
+    }
+    if (ahora == horario.cierre) {
+      this.cierreAutomatico();
+    }
+    if (ahora == HORA_RECORDATORIO_ASEO) {
+      this.recordarAseo();
+    }
   }
 
   onModuleDestroy() {
@@ -103,12 +102,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       protocol: 'mqtts',
       username: process.env.MQTT_USUARIO,
       password: process.env.MQTT_CLAVE,
-      ca: fs.readFileSync(path.join(process.cwd(), '..', 'certificados', 'emqxsl-ca.crt')),
+      // certificados de confianza de Windows (asi funciona aunque el antivirus revise la conexion)
+      ca: tls.getCACertificates('system'),
     });
 
     this.clienteMqtt.on('connect', () => {
       console.log('Bot conectado al broker MQTT');
-      this.clienteMqtt.subscribe([TOPIC_REGISTRO, TOPIC_CONTROL, TOPIC_LED_ESTADO]);
+      this.clienteMqtt.subscribe([TOPIC_REGISTRO, TOPIC_CONTROL]);
     });
 
     this.clienteMqtt.on('message', (topic, datos) => {
@@ -123,13 +123,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       // si cierran desde el tactil tambien se cierra aca
       if (topic === TOPIC_CONTROL && mensaje === 'CERRAR') {
         this.cierreAutomatico();
-      }
-      if (topic == TOPIC_LED_ESTADO) {
-        try {
-          this.leds = JSON.parse(mensaje);
-        } catch (error) {
-          console.log(`Estado de led invalido: ${mensaje}`);
-        }
       }
     });
   }
@@ -221,7 +214,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         guardarJson('excusas.json', excusas);
         await this.enviar(
           aprendiz.chatId,
-          `Hola ${nombre}, hoy no asististe a clase (${HORA_INICIO}). Que paso? Responde este mensaje con tu excusa.`,
+          `Hola ${nombre}, hoy no asististe a clase (${leerHorario().inicio}). Que paso? Responde este mensaje con tu excusa.`,
         );
       }
     }
@@ -257,9 +250,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
 
     const asistencia = leerJson('asistencia.json', {});
-    const resumen = this.resumenDia(this.leerDia(asistencia, hoy));
+    const dia = this.leerDia(asistencia, hoy);
+    const resumen = this.resumenDia(dia);
+    // los que llegaron tarde ordenados del ultimo en llegar al primero
+    const tardesDelUltimo = dia.registros
+      .filter((r: Registro) => r.estado == 'TARDE')
+      .sort((a: Registro, b: Registro) => b.hora.localeCompare(a.hora))
+      .map((r: Registro) => r.nombre);
     const diaAseo = siguienteDiaClase();
-    const sorteo = { fecha: formatoFecha(diaAseo), sorteadoEl: hoy, asignados: sortearAseo(resumen.tardes, resumen.ausentes) };
+    const sorteo = { fecha: formatoFecha(diaAseo), sorteadoEl: hoy, asignados: sortearAseo(tardesDelUltimo, resumen.ausentes) };
     aseo.push(sorteo);
     guardarJson('aseo.json', aseo);
 
@@ -288,10 +287,126 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     return llegaron;
   }
 
-  async crearExcelDeHoy() {
+  async crearExcelDelDia(fecha: string) {
     const asistencia = leerJson('asistencia.json', {});
-    const dia = this.leerDia(asistencia, fechaHoy());
-    return crearExcel(fechaHoy(), this.agregarExcusas(fechaHoy(), this.registrosParaExcel(dia)));
+    const dia = this.leerDia(asistencia, fecha);
+    return crearExcel(fecha, this.agregarExcusas(fecha, this.registrosParaExcel(dia)));
+  }
+
+  cambiarHorario(datos: Horario) {
+    const formato = /^[0-2][0-9]:[0-5][0-9]$/;
+    const campos = ['apertura', 'inicio', 'salida', 'cierre'];
+    for (const campo of campos) {
+      if (!formato.test(datos[campo] || '')) {
+        return `La hora de ${campo} no es valida`;
+      }
+    }
+    if (!(datos.apertura <= datos.inicio && datos.inicio < datos.salida && datos.salida <= datos.cierre)) {
+      return 'Revisa el orden: apertura, hora limite, salida y cierre';
+    }
+    guardarJson('horario.json', { apertura: datos.apertura, inicio: datos.inicio, salida: datos.salida, cierre: datos.cierre });
+    console.log(`Horario cambiado: ${datos.apertura} ${datos.inicio} ${datos.salida} ${datos.cierre}`);
+    return 'Horario guardado';
+  }
+
+  // lista de dias con cuantos llegaron a tiempo, tarde y cuantos faltaron
+  historial() {
+    const asistencia = leerJson('asistencia.json', {});
+    const fechas = Object.keys(asistencia).sort().reverse();
+    return fechas.map((fecha) => {
+      const resumen = this.resumenDia(asistencia[fecha]);
+      return {
+        fecha,
+        cerrada: asistencia[fecha].cerrada,
+        aTiempo: resumen.aTiempo.length,
+        tardes: resumen.tardes.length,
+        ausentes: resumen.ausentes.length,
+      };
+    });
+  }
+
+  detalleDia(fecha: string) {
+    const asistencia = leerJson('asistencia.json', {});
+    const dia = this.leerDia(asistencia, fecha);
+    return { fecha, cerrada: dia.cerrada, registros: this.agregarExcusas(fecha, this.registrosParaExcel(dia)) };
+  }
+
+  // solo se cuentan los dias que ya se cerraron
+  resumenAprendices() {
+    const asistencia = leerJson('asistencia.json', {});
+    const fechas = Object.keys(asistencia).filter((f) => asistencia[f].cerrada).sort();
+    const aprendices: Aprendiz[] = leerJson('aprendices.json', []);
+    const excusas = leerJson('excusas.json', []);
+
+    const lista = leerNombres().map((nombre) => {
+      let asistencias = 0;
+      let tardes = 0;
+      let fallas = 0;
+      let fallasSeguidas = 0;
+      for (const fecha of fechas) {
+        const registro = asistencia[fecha].registros.find((r: Registro) => r.nombre === nombre);
+        if (!registro) {
+          continue;
+        }
+        if (registro.estado == 'AUSENTE') {
+          fallas++;
+          fallasSeguidas++;
+        } else {
+          asistencias++;
+          fallasSeguidas = 0;
+        }
+        if (registro.estado == 'TARDE') {
+          tardes++;
+        }
+      }
+      return {
+        nombre,
+        asistencias,
+        tardes,
+        fallas,
+        fallasSeguidas,
+        excusasAceptadas: excusas.filter((e) => e.nombre === nombre && e.estado == 'ACEPTADA').length,
+        telegram: aprendices.some((a) => a.nombre === nombre),
+      };
+    });
+    return { diasDeClase: fechas.length, aprendices: lista };
+  }
+
+  // del mas nuevo al mas viejo, y si una fecha quedo repetida se deja el ultimo sorteo
+  listaAseo() {
+    const aseo = leerJson('aseo.json', []);
+    const lista: any[] = [];
+    for (const dia of aseo) {
+      const repetido = lista.findIndex((d) => d.fecha == dia.fecha);
+      if (repetido != -1) {
+        lista.splice(repetido, 1);
+      }
+      lista.push(dia);
+    }
+    return lista.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  }
+
+  // a gemini se le pasa un resumen de la asistencia para que responda
+  async preguntarIa(pregunta: string) {
+    const asistencia = leerJson('asistencia.json', {});
+    const resumen = this.resumenAprendices();
+    let datos = `Hoy es ${fechaEnTexto(new Date())} (${fechaHoy()}). Dias de clase cerrados: ${resumen.diasDeClase}.\n\n`;
+    datos += 'Totales por aprendiz:\n';
+    for (const a of resumen.aprendices) {
+      datos += `- ${a.nombre}: asistio ${a.asistencias} (tarde ${a.tardes}), fallas ${a.fallas}, ` +
+        `fallas seguidas ${a.fallasSeguidas}, excusas aceptadas ${a.excusasAceptadas}\n`;
+    }
+    datos += '\nDetalle por dia:\n';
+    for (const fecha of Object.keys(asistencia).sort()) {
+      const dia = this.resumenDia(asistencia[fecha]);
+      let nota = '';
+      if (!asistencia[fecha].cerrada) {
+        nota = ' (asistencia aun abierta)';
+      }
+      datos += `${fecha}${nota}: a tiempo: ${this.listar(dia.aTiempo)}; tarde: ${this.listar(dia.tardes)}; ` +
+        `ausentes: ${this.listar(dia.ausentes)}\n`;
+    }
+    return responderPregunta(pregunta, datos);
   }
 
   estadoDeHoy() {
@@ -307,19 +422,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       aTiempo: resumen.aTiempo.length,
       tardes: resumen.tardes.length,
       ausentes: resumen.ausentes,
-      leds: this.leds,
+      horario: leerHorario(),
       sorteo: aseo.find((a) => a.sorteadoEl == hoy) || null,
       excusas: leerJson('excusas.json', []).filter((e) => e.estado == 'PENDIENTE'),
       permisos: leerJson('permisos.json', []).filter((p) => p.estado == 'PENDIENTE'),
     };
-  }
-
-  cambiarLed(color: string, encender: boolean) {
-    let accion = 'APAGAR';
-    if (encender) {
-      accion = 'ENCENDER';
-    }
-    this.clienteMqtt.publish(TOPIC_LED, `${accion}_${color.toUpperCase()}`);
   }
 
   async recordarAseo() {
@@ -375,7 +482,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         await this.enviar(
           aprendiz.chatId,
           `Hola ${nombre}, esta semana llevas 2 llegadas tarde. Sabemos que a veces se complica, pero tu puedes! ` +
-            `Intenta salir un poco antes, te esperamos a las ${HORA_INICIO}.`,
+            `Intenta salir un poco antes, te esperamos a las ${leerHorario().inicio}.`,
         );
       }
     }

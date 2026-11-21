@@ -1,3 +1,5 @@
+import { leerHorario } from './asistencia';
+
 // si el primero falla se prueba con el siguiente
 const MODELOS = ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
 
@@ -20,8 +22,9 @@ export async function analizarExcusa(nombre: string, texto: string) {
 }
 
 export async function analizarPermiso(nombre: string, motivo: string, horaSalida: string) {
+  const horario = leerHorario();
   const instruccion =
-    'Eres el asistente de un instructor del SENA. La clase es de 12:30 a 17:30.\n' +
+    `Eres el asistente de un instructor del SENA. La clase es de ${horario.inicio} a ${horario.salida}.\n` +
     'Un aprendiz pide permiso para salir antes de que termine la clase.\n' +
     'Haz un resumen corto (maximo 20 palabras) y sugiere si el instructor deberia ACEPTAR o RECHAZAR el permiso.\n' +
     'Se aceptan: citas medicas, salud, calamidad familiar, tramites obligatorios o trabajo con soporte.\n' +
@@ -31,6 +34,17 @@ export async function analizarPermiso(nombre: string, motivo: string, horaSalida
     'Responde solo con este JSON: {"resumen": "...", "sugerencia": "ACEPTAR" o "RECHAZAR", "razon": "...", "motivo": "..."}\n\n' +
     `Aprendiz: ${nombre}\nHora de salida: ${horaSalida}\nMotivo: ${motivo}`;
   return preguntarGemini(instruccion);
+}
+
+// el instructor pregunta desde la pagina, se le pasan los datos de asistencia
+export async function responderPregunta(pregunta: string, datos: string) {
+  const instruccion =
+    'Eres AsistIA, el asistente de un instructor del SENA. Responde en espanol, corto y claro, ' +
+    'usando solo los datos de asistencia que te doy. Si la respuesta no esta en los datos, dilo.\n' +
+    'Responde solo con este JSON: {"respuesta": "..."}\n\n' +
+    `Datos:\n${datos}\n\nPregunta del instructor: ${pregunta}`;
+  const resultado: any = await preguntarGemini(instruccion);
+  return resultado.respuesta || 'No pude responder en este momento, intenta de nuevo.';
 }
 
 async function preguntarGemini(instruccion: string) {
@@ -55,7 +69,11 @@ async function preguntarGemini(instruccion: string) {
         const analisis: Analisis = JSON.parse(textoGemini);
         return analisis;
       }
-      console.log(`Error de Gemini (${modelo}):`, datos.error ? datos.error.message : respuesta.status);
+      if (datos.error) {
+        console.log(`Error de Gemini (${modelo}):`, datos.error.message);
+      } else {
+        console.log(`Error de Gemini (${modelo}):`, respuesta.status);
+      }
     } catch (error) {
       console.log(`No se pudo usar Gemini con ${modelo}:`, error.message);
     }

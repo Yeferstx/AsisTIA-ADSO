@@ -1,14 +1,24 @@
 import ExcelJS from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { CARPETA_DATOS } from './archivos';
+import { CARPETA_DATOS, leerJson } from './archivos';
 
-export const HORA_APERTURA = '12:00';
-export const HORA_INICIO = '12:30';
-export const HORA_CIERRE = '18:00';
 export const HORA_RECORDATORIO_ASEO = '17:00';
-export const HORA_SALIDA = '17:30';
 export const DIAS_CLASE = [1, 2, 3, 4, 5]; // lunes a viernes
+
+// el instructor lo cambia desde la pagina y se guarda en horario.json
+export interface Horario {
+  apertura: string;
+  inicio: string; // despues de esta hora llega TARDE
+  salida: string;
+  cierre: string;
+}
+
+const HORARIO_POR_DEFECTO: Horario = { apertura: '12:00', inicio: '12:30', salida: '17:30', cierre: '18:00' };
+
+export function leerHorario(): Horario {
+  return leerJson('horario.json', HORARIO_POR_DEFECTO);
+}
 
 const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -68,9 +78,9 @@ function revolver(lista: string[]) {
   return lista.slice().sort(() => Math.random() - 0.5);
 }
 
-// 3 al azar de los que llegaron tarde, si no alcanza se completa con los ausentes
+// los 3 que llegaron mas tarde (tardes viene del ultimo al primero), si no alcanzan se completa con ausentes
 export function sortearAseo(tardes: string[], ausentes: string[]) {
-  const lista = revolver(tardes).concat(revolver(ausentes));
+  const lista = tardes.concat(revolver(ausentes));
   const tareas = revolver(TAREAS);
   const asignados: Asignado[] = [];
   for (let i = 0; i < lista.length && i < 3; i++) {
