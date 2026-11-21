@@ -2,18 +2,23 @@ import cv2
 import os
 import json
 import time
+import urllib.request
 from datetime import datetime
 from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
 
 HORA_INICIO = "12:00"
 HORA_CORTE = "12:30"
-UMBRAL = 50  # entre mas bajo mas se parece
-VECES_PARA_CONFIRMAR = 8  # veces seguidas para confirmar
-TAMANO_MINIMO = 120  # caras mas pequenas no se tienen en cuenta
+UMBRAL = 52  # entre mas bajo mas se parece
+VECES_PARA_CONFIRMAR = 12  # veces seguidas para confirmar
+TAMANO_MINIMO = 200  # caras mas pequenas no se tienen en cuenta (estan lejos y salen DESCONOCIDO)
 TOPIC_REGISTRO = "sena/asistencia/registro"
 TOPIC_PRESENCIA = "sena/asistencia/presencia"
 SEGUNDOS_CAMARA = 20  # si no ve a nadie en este tiempo se apaga la camara
+# 0 = camara del portatil, o la direccion de DroidCam para usar la del celular
+CAMARA = "http://192.168.101.3:4747/video"
+GIRAR_IMAGEN = True  # True si el celular esta vertical y la imagen llega acostada
+URL_HORARIO = "http://localhost:3000/api/horario"  # el instructor lo cambia en la pagina
 
 load_dotenv("../.env")
 
@@ -38,7 +43,8 @@ ultima_presencia = 0
 
 cliente = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 cliente.username_pw_set(os.getenv("MQTT_USUARIO"), os.getenv("MQTT_CLAVE"))
-cliente.tls_set(ca_certs="../certificados/emqxsl-ca.crt")
+# usa los certificados de confianza de Windows (asi funciona aunque el antivirus revise la conexion)
+cliente.tls_set()
 cliente.on_connect = al_conectar
 cliente.on_message = al_recibir
 cliente.connect(os.getenv("MQTT_HOST"), int(os.getenv("MQTT_PUERTO")))
@@ -65,17 +71,38 @@ detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalfac
 camara = None
 registrados = {}
 ultimo_desconocido = 0
+ultimo_reconocido = 0
 candidato = ""
 veces_seguidas = 0
 
 
+ultima_consulta_horario = 0
+
+
+# cada minuto se pregunta el horario al servidor, si no responde se deja el que habia
+def actualizar_horario():
+    global HORA_INICIO, HORA_CORTE, ultima_consulta_horario
+    if time.time() - ultima_consulta_horario < 60:
+        return
+    ultima_consulta_horario = time.time()
+    try:
+        with urllib.request.urlopen(URL_HORARIO, timeout=2) as respuesta:
+            horario = json.loads(respuesta.read())
+        HORA_INICIO = horario["apertura"]
+        HORA_CORTE = horario["inicio"]
+    except Exception:
+        print(f"No se pudo leer el horario del servidor, se usa {HORA_CORTE}")
+
+
 def calcular_estado():
+    actualizar_horario()
     ahora = datetime.now().strftime("%H:%M")
     if ahora <= HORA_CORTE:
         return "A_TIEMPO"
     return "TARDE"
 
 
+actualizar_horario()
 print(f"Clase: inicio {HORA_INICIO} - corte {HORA_CORTE}. ESC o Ctrl + C para salir.")
 print("Esperando al sensor ultrasonico...")
 
@@ -92,12 +119,14 @@ while True:
 
     if camara is None:
         print("Persona detectada, prendiendo la camara")
-        camara = cv2.VideoCapture(0)
+        camara = cv2.VideoCapture(CAMARA)
 
     ok, imagen = camara.read()
     if not ok:
         print("No se pudo leer la camara")
         break
+    if GIRAR_IMAGEN:
+        imagen = cv2.rotate(imagen, cv2.ROTATE_90_CLOCKWISE)
 
     gris = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
     caras = detector.detectMultiScale(gris, 1.3, 5, minSize=(TAMANO_MINIMO, TAMANO_MINIMO))
@@ -134,14 +163,16 @@ while True:
                 print(f"{nombre} llego a las {hora} -> {registrados[nombre]['estado']}")
                 publicar_registro(nombre, hora, registrados[nombre]["estado"])
 
+            ultimo_reconocido = time.time()
             estado = registrados[nombre]["estado"]
             texto = f"{nombre} - {estado}"
             color = (0, 255, 0) if estado == "A_TIEMPO" else (0, 165, 255)
         else:
             texto = "NO REGISTRADO"
             color = (0, 0, 255)
-            # el desconocido cada 10 segundos para no llenar el broker
-            if time.time() - ultimo_desconocido > 10:
+            # el desconocido cada 10 segundos para no llenar el broker, y no justo despues
+            # de reconocer a alguien (cuando voltea a mirar la maqueta su cara sale de lado)
+            if time.time() - ultimo_desconocido > 10 and time.time() - ultimo_reconocido > 15:
                 ultimo_desconocido = time.time()
                 publicar_registro("DESCONOCIDO", datetime.now().strftime("%H:%M:%S"), "DESCONOCIDO")
 
@@ -150,7 +181,10 @@ while True:
         cv2.putText(imagen, f"distancia: {int(distancia)}", (x, y + h + 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-    cv2.imshow("AsistIA SENA", imagen)
+    # en pantalla se muestra mas pequena para que quepa
+    alto = 720
+    ancho = int(imagen.shape[1] * alto / imagen.shape[0])
+    cv2.imshow("AsistIA SENA", cv2.resize(imagen, (ancho, alto)))
     if cv2.waitKey(1) == 27:
         break
 
