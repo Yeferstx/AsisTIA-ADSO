@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingresar - AsistIA SENA</title>
+  <link rel="icon" href="img/asistia.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body class="pagina-login">
+  <button id="botonTema" class="boton-tema login-tema" type="button" onclick="cambiarTema()" title="Cambiar tema" aria-label="Cambiar tema">
+    <span class="estrella estrella-1"></span>
+    <span class="estrella estrella-2"></span>
+    <span class="estrella estrella-3"></span>
+    <span class="nubecita nubecita-1"></span>
+    <span class="nubecita nubecita-2"></span>
+    <span class="perilla">
+      <i class="ph-duotone ph-sun icono-sol"></i>
+      <i class="ph-duotone ph-moon icono-luna"></i>
+    </span>
+  </button>
+
+  <main class="login">
+    <form id="formLogin" class="login-caja" onsubmit="iniciarSesion(event)">
+      <img src="img/asistia.png" alt="Mascota AsistIA" class="login-mascota">
+      <h1>Asist<span>IA</span></h1>
+      <p class="login-subtitulo">Panel del instructor - Ficha 3237831</p>
+
+      <label class="login-campo">
+        <span>Usuario</span>
+        <div class="login-entrada">
+          <i class="ph-duotone ph-user"></i>
+          <input type="text" id="usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required autofocus>
+        </div>
+      </label>
+
+      <label class="login-campo">
+        <span>Clave</span>
+        <div class="login-entrada">
+          <i class="ph-duotone ph-lock-key"></i>
+          <input type="password" id="clave" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+          <button type="button" class="ver-clave" onclick="verClave()" aria-label="Mostrar u ocultar la clave">
+            <i id="iconoVerClave" class="ph-duotone ph-eye"></i>
+          </button>
+        </div>
+      </label>
+
+      <p id="errorLogin" class="login-error" role="alert"></p>
+
+      <button type="submit" id="botonEntrar" class="login-boton">
+        <span>Entrar</span>
+        <i class="ph-duotone ph-arrow-right"></i>
+      </button>
+    </form>
+    <p class="login-pie">AsistIA SENA - Equipo XchanGo</p>
+  </main>
+
+  <script src="login.js"></script>
+</body>
+</html>
