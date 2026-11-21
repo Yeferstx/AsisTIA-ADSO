@@ -2,136 +2,227 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   <title>AsistIA SENA</title>
   <link rel="icon" href="img/asistia.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css">
   <link rel="stylesheet" href="estilos.css">
 </head>
-<body>
+<body class="cargando">
   <header>
     <div class="marca">
       <img src="img/asistia.png" alt="AsistIA" class="logo">
       <div>
         <h1>Asist<span>IA</span></h1>
-        <p>SENA - Ficha 3237831 - Equipo XchanGo</p>
+        <p>SENA - Ficha 3237831 - Panel del instructor</p>
       </div>
     </div>
     <div class="cabecera-derecha">
-      <div id="reloj" class="reloj">--:--:--</div>
-      <div id="enVivo" class="en-vivo"><span class="punto"></span> <span id="textoConexion">Conectando...</span></div>
+      <div class="botones-cabecera">
+        <button id="botonTema" class="boton-tema" onclick="cambiarTema()" title="Cambiar a modo oscuro" aria-label="Cambiar tema">
+          <span class="estrella estrella-1"></span>
+          <span class="estrella estrella-2"></span>
+          <span class="estrella estrella-3"></span>
+          <span class="nubecita nubecita-1"></span>
+          <span class="nubecita nubecita-2"></span>
+          <span class="perilla">
+            <i class="ph-duotone ph-sun icono-sol"></i>
+            <i class="ph-duotone ph-moon icono-luna"></i>
+          </span>
+        </button>
+        <button class="boton-salir" onclick="cerrarSesion()" title="Cerrar sesion" aria-label="Cerrar sesion">
+          <i class="ph-duotone ph-sign-out"></i>
+        </button>
+      </div>
+      <div class="reloj-caja">
+        <div id="reloj" class="reloj">--:--:--</div>
+        <div id="enVivo" class="en-vivo"><span class="punto"></span> <span id="textoConexion">Conectando...</span></div>
+      </div>
     </div>
   </header>
 
+  <nav class="pestanas">
+    <button class="pestana activa" data-pestana="hoy" onclick="mostrarPestana('hoy')"><i class="ph-duotone ph-calendar-check"></i>Hoy</button>
+    <button class="pestana" data-pestana="historial" onclick="mostrarPestana('historial')"><i class="ph-duotone ph-clock-counter-clockwise"></i>Historial</button>
+    <button class="pestana" data-pestana="aprendices" onclick="mostrarPestana('aprendices')"><i class="ph-duotone ph-users-three"></i>Aprendices</button>
+    <button class="pestana" data-pestana="aseo" onclick="mostrarPestana('aseo')"><i class="ph-duotone ph-broom"></i>Aseo</button>
+  </nav>
+
   <main>
-    <section class="bienvenida">
-      <div class="bienvenida-texto">
-        <h2>Hola, soy Asist<span>IA</span></h2>
-        <p>Llevo la asistencia de la ficha, aviso por Telegram y le ayudo al instructor con las excusas y los permisos.</p>
-        <div class="barra-estado">
-          <span id="fecha" class="fecha">Cargando...</span>
-          <span id="estadoAsistencia" class="etiqueta">-</span>
+    <div id="pestana-hoy" class="contenido-pestana">
+      <section class="bienvenida">
+        <div class="bienvenida-texto">
+          <h2>Asistencia de hoy</h2>
+          <div class="barra-estado">
+            <span id="fecha" class="fecha">Cargando...</span>
+            <span id="estadoAsistencia" class="etiqueta">-</span>
+          </div>
+          <p id="textoHorario" class="texto-horario"></p>
         </div>
-      </div>
-      <img src="img/asistia.png" alt="Mascota AsistIA" class="mascota">
-    </section>
-
-    <section class="resumen">
-      <div class="cuadro cuadro-verde">
-        <p>A tiempo</p>
-        <span id="totalATiempo">0</span>
-      </div>
-      <div class="cuadro cuadro-rojo">
-        <p>Tarde</p>
-        <span id="totalTarde">0</span>
-      </div>
-      <div class="cuadro cuadro-gris">
-        <p>Ausentes</p>
-        <span id="totalAusentes">0</span>
-      </div>
-    </section>
-
-    <div class="columnas">
-      <section class="tarjeta">
-        <h2>Llegadas de hoy</h2>
-        <div id="listaLlegadas" class="lista-llegadas"></div>
-        <p class="faltan">Faltan: <span id="listaAusentes">-</span></p>
+        <img src="img/asistia.png" alt="Mascota AsistIA" class="mascota">
       </section>
 
-      <section class="tarjeta">
-        <h2>LED de la maqueta</h2>
-        <div class="leds">
-          <div id="cajaVerde" class="led-caja">
-            <div class="foco foco-verde">
-              <div class="cupula"></div>
-              <div class="base"></div>
-              <div class="patas"><span></span><span class="corta"></span></div>
-            </div>
-            <p class="nombre-led">Verde <small>pin 26</small></p>
-            <label class="interruptor">
-              <input type="checkbox" id="interruptorVerde" onchange="cambiarLed('verde', this.checked)">
-              <span class="deslizador"></span>
-            </label>
-            <p id="textoVerde" class="estado-led">Apagado</p>
-          </div>
+      <section class="resumen">
+        <div class="dato">
+          <p class="dato-titulo"><span class="punto-dato punto-verde"></span>A tiempo</p>
+          <b class="dato-numero" id="totalATiempo">0</b>
+          <small class="dato-texto">Llegadas puntuales</small>
+        </div>
+        <div class="dato">
+          <p class="dato-titulo"><span class="punto-dato punto-rojo"></span>Tarde</p>
+          <b class="dato-numero" id="totalTarde">0</b>
+          <small class="dato-texto">Llegadas tarde</small>
+        </div>
+        <div class="dato">
+          <p class="dato-titulo"><span class="punto-dato punto-azul"></span>Ausentes</p>
+          <b class="dato-numero" id="totalAusentes">0</b>
+          <small class="dato-texto">Sin registrar entrada</small>
+        </div>
+      </section>
 
-          <div id="cajaRojo" class="led-caja">
-            <div class="foco foco-rojo">
-              <div class="cupula"></div>
-              <div class="base"></div>
-              <div class="patas"><span></span><span class="corta"></span></div>
-            </div>
-            <p class="nombre-led">Rojo <small>pin 27</small></p>
-            <label class="interruptor">
-              <input type="checkbox" id="interruptorRojo" onchange="cambiarLed('rojo', this.checked)">
-              <span class="deslizador"></span>
-            </label>
-            <p id="textoRojo" class="estado-led">Apagado</p>
+      <div class="columnas">
+        <section class="tarjeta">
+          <h2><i class="ph-duotone ph-door-open"></i>Llegadas de hoy</h2>
+          <div id="listaLlegadas" class="lista-llegadas"></div>
+          <p class="faltan">Faltan: <span id="listaAusentes">-</span></p>
+        </section>
+
+        <section class="tarjeta tarjeta-acciones">
+          <h2><i class="ph-duotone ph-lightning"></i>Acciones</h2>
+          <div class="acciones">
+            <button class="boton boton-excel" onclick="descargarExcel('')">
+              <i class="ph-duotone ph-microsoft-excel-logo icono-boton"></i>
+              <span>
+                <b>Descargar Excel de hoy</b>
+                <small>Llegadas, ausentes y excusas</small>
+              </span>
+            </button>
+            <button id="botonCerrar" class="boton boton-cerrar" onclick="cerrarAsistencia()">
+              <i class="ph-duotone ph-lock-key icono-boton"></i>
+              <span>
+                <b>Cerrar asistencia ahora</b>
+                <small>Avisa a los ausentes, te manda el resumen y sortea el aseo</small>
+              </span>
+            </button>
           </div>
+          <h2 class="subtitulo"><i class="ph-duotone ph-broom"></i>Aseo del proximo dia de clase</h2>
+          <div id="sorteo" class="sorteo-vacio">El sorteo se hace al cerrar la asistencia.</div>
+        </section>
+      </div>
+
+      <section class="tarjeta">
+        <h2><i class="ph-duotone ph-clock"></i>Horario de clase</h2>
+        <form class="horario" onsubmit="guardarHorario(event)">
+          <label>Abre la asistencia <input type="time" id="horaApertura" required></label>
+          <label>Hora limite (despues es tarde) <input type="time" id="horaInicio" required></label>
+          <label>Salida (se apaga la luz) <input type="time" id="horaSalida" required></label>
+          <label>Cierre automatico <input type="time" id="horaCierre" required></label>
+          <button type="submit" class="boton-guardar">Guardar horario</button>
+        </form>
+      </section>
+
+      <section class="tarjeta separada">
+        <h2><i class="ph-duotone ph-sign-out"></i>Permisos de salida <span id="totalPermisos" class="contador">0</span></h2>
+        <div id="listaPermisos" class="lista-excusas"></div>
+      </section>
+
+      <section class="tarjeta separada">
+        <h2><i class="ph-duotone ph-chat-circle-text"></i>Excusas por revisar <span id="totalExcusas" class="contador">0</span></h2>
+        <div id="listaExcusas" class="lista-excusas"></div>
+      </section>
+    </div>
+
+    <div id="pestana-historial" class="contenido-pestana oculta">
+      <div class="columnas columnas-historial">
+        <section class="tarjeta">
+          <h2><i class="ph-duotone ph-calendar-dots"></i>Dias de clase</h2>
+          <div class="tabla-caja">
+            <table>
+              <thead>
+                <tr><th>Fecha</th><th>A tiempo</th><th>Tarde</th><th>Ausentes</th><th></th></tr>
+              </thead>
+              <tbody id="tablaHistorial"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="tarjeta">
+          <h2 id="tituloDia">Detalle del dia</h2>
+          <div id="detalleDia" class="vacio">Elige un dia de la lista</div>
+        </section>
+      </div>
+    </div>
+
+    <div id="pestana-aprendices" class="contenido-pestana oculta">
+      <section class="tarjeta">
+        <h2><i class="ph-duotone ph-chart-bar"></i>Fallas por aprendiz</h2>
+        <p id="textoDiasClase" class="nota"></p>
+        <div class="tabla-caja">
+          <table>
+            <thead>
+              <tr><th>Aprendiz</th><th>Asistio</th><th>Tarde</th><th>Fallas</th><th>Fallas seguidas</th><th>Excusas aceptadas</th><th>Telegram</th></tr>
+            </thead>
+            <tbody id="tablaAprendices"></tbody>
+          </table>
         </div>
       </section>
     </div>
 
-    <div class="columnas">
+    <div id="pestana-aseo" class="contenido-pestana oculta">
       <section class="tarjeta">
-        <h2>Acciones</h2>
-        <div class="acciones">
-          <button class="boton boton-excel" onclick="generarExcel()">
-            <b>Generar Excel</b>
-            <small>Descarga la asistencia de hoy</small>
-          </button>
-          <button class="boton boton-sorteo" onclick="hacerSorteo()">
-            <b>Sortear aseo</b>
-            <small>Trapero, escoba y trapito</small>
-          </button>
-          <button class="boton boton-telegram" onclick="enviarTelegram()">
-            <b>Enviar Telegram</b>
-            <small>Ausentes e instructor</small>
-          </button>
-        </div>
-      </section>
-
-      <section class="tarjeta">
-        <h2>Sorteo del aseo</h2>
-        <div id="sorteo" class="sorteo-vacio">Todavia no se ha hecho el sorteo de hoy.</div>
+        <h2><i class="ph-duotone ph-broom"></i>Calendario del aseo</h2>
+        <div id="calendarioAseo" class="calendario"></div>
       </section>
     </div>
 
-    <section class="tarjeta">
-      <h2>Permisos de salida <span id="totalPermisos" class="contador">0</span></h2>
-      <div id="listaPermisos" class="lista-excusas"></div>
-    </section>
-
-    <section class="tarjeta separada">
-      <h2>Excusas por revisar <span id="totalExcusas" class="contador">0</span></h2>
-      <div id="listaExcusas" class="lista-excusas"></div>
-    </section>
   </main>
 
-  <footer>AsistIA SENA - Analisis y Desarrollo de Software</footer>
+  <footer>AsistIA SENA - Analisis y Desarrollo de Software - Equipo XchanGo</footer>
+
+  <button id="botonChat" class="boton-chat" onclick="abrirChat()" title="Preguntale a AsistIA" aria-label="Abrir el chat con AsistIA">
+    <img src="img/asistia.png" alt="AsistIA">
+    <span class="texto-boton-chat">Preguntale a AsistIA</span>
+  </button>
+
+  <div id="panelChat" class="panel-chat oculta">
+    <div class="chat-cabecera">
+      <img src="img/asistia.png" alt="AsistIA">
+      <div>
+        <b>AsistIA <i class="ph-duotone ph-sparkle"></i></b>
+        <small>Pregunta sobre la asistencia</small>
+      </div>
+      <button class="cerrar-chat" onclick="abrirChat()" title="Cerrar" aria-label="Cerrar el chat"><i class="ph-duotone ph-x"></i></button>
+    </div>
+    <div id="mensajesChat" class="mensajes-chat">
+      <div class="mensaje mensaje-ia">Hola, preguntame lo que quieras sobre la asistencia de la ficha.</div>
+      <div class="sugerencias">
+        <button onclick="preguntarSugerencia(this)">Quien ha faltado mas este mes?</button>
+        <button onclick="preguntarSugerencia(this)">Quien llega tarde seguido?</button>
+        <button onclick="preguntarSugerencia(this)">Hay alguien en riesgo de desercion?</button>
+      </div>
+    </div>
+    <form class="caja-pregunta" onsubmit="enviarPregunta(event)">
+      <input type="text" id="pregunta" placeholder="Ej: cuantas fallas lleva miguel?" maxlength="300" autocomplete="off">
+      <button type="submit" aria-label="Enviar pregunta"><i class="ph-duotone ph-paper-plane-tilt"></i></button>
+    </form>
+  </div>
 
   <div id="aviso" class="aviso"></div>
+
+  <div id="modal" class="modal oculta" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+    <div class="modal-caja">
+      <img src="img/asistia.png" alt="" class="modal-mascota">
+      <h3 id="modalTitulo"></h3>
+      <p id="modalTexto"></p>
+      <ul id="modalLista" class="modal-lista"></ul>
+      <div class="modal-botones">
+        <button id="modalCancelar" class="modal-cancelar">Cancelar</button>
+        <button id="modalAceptar" class="modal-aceptar"></button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
