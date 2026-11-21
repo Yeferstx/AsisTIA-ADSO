@@ -17,8 +17,8 @@
 #define PIN_TACTIL 4
 #define PIN_SERVO 18
 #define PIN_RELE 13
-#define PIN_LED_VERDE 26
-#define PIN_LED_ROJO 27
+#define PIN_LED_VERDE 27
+#define PIN_LED_ROJO 26
 #define PIN_OLED_SDA 33
 #define PIN_OLED_SCL 32
 
@@ -49,6 +49,8 @@ int tactilAnterior = LOW;
 int tactilReposo = LOW;  // como lee el tactil cuando nadie lo toca
 unsigned long ultimaMedicion = 0;
 unsigned long ultimoAvisoCamara = 0;
+unsigned long ultimoToque = 0;
+int lecturasLejos = 0;
 bool ledVerde = false;
 bool ledRojo = false;
 unsigned long ultimaHora = 0;
@@ -258,8 +260,9 @@ void revisarTactil() {
     Serial.println("Tactil cambio a: " + String(tactil));
   }
   // el tactil publica en control y el esp32 tambien lo escucha
-  // cuenta como toque cuando pasa de reposo a tocado
-  if (tactil != tactilReposo && tactilAnterior == tactilReposo) {
+  // cuenta como toque cuando pasa de reposo a tocado, y no cuenta otro en 1 segundo (rebote)
+  if (tactil != tactilReposo && tactilAnterior == tactilReposo && millis() - ultimoToque > 1000) {
+    ultimoToque = millis();
     if (asistenciaAbierta) {
       clienteMqtt.publish(TOPIC_CONTROL, "CERRAR");
     } else {
@@ -277,6 +280,7 @@ void revisarUltrasonico() {
   long distancia = medirDistancia();
 
   if (distancia < DISTANCIA_PERSONA) {
+    lecturasLejos = 0;
     // mientras haya alguien cerca se le avisa a la camara cada 3 segundos
     if (millis() - ultimoAvisoCamara > 3000) {
       ultimoAvisoCamara = millis();
@@ -291,7 +295,11 @@ void revisarUltrasonico() {
       mostrar("Hola!", "Mire la camara");
     }
   } else if (distancia > DISTANCIA_PERSONA + 10) {
-    personaCerca = false;
+    // tiene que salir lejos 5 veces seguidas, asi una lectura mala no cuenta otra vez a la misma persona
+    lecturasLejos++;
+    if (lecturasLejos >= 5) {
+      personaCerca = false;
+    }
   }
 }
 
