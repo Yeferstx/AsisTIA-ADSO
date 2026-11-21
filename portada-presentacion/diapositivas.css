@@ -1,0 +1,940 @@
+/* ===== estilos que comparten las diapositivas de contenido ===== */
+:root {
+  --azul-oscuro: #10213C;
+  --azul: #168BFF;
+  --blanco-suave: #F8FAFC;
+  --gris: #71829B;
+  --texto-oscuro: #A9B6C8;
+  --texto-claro: #4A5A70;
+  --linea-oscura: #1A2A44;
+  --linea-clara: #D9E1EB;
+}
+
+.diapositiva {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 7.6cqw 5.5cqw 4cqw;
+  color: var(--blanco-suave);
+}
+
+:where(.diapositiva) p,
+:where(.diapositiva) li {
+  font-family: 'Nunito Sans', sans-serif;
+}
+
+/* diapositivas de fondo claro para dar contraste */
+.clara {
+  background: #F3F6FA;
+  color: var(--negro);
+}
+
+/* barra de arriba con el nombre y el numero */
+.barra {
+  position: absolute;
+  top: 2.4cqw;
+  left: 5.5cqw;
+  right: 5.5cqw;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 0.8cqw;
+  border-bottom: 1px solid rgba(113, 130, 155, 0.25);
+}
+
+.barra p {
+  font-weight: 600;
+  font-size: 0.95cqw;
+  color: var(--gris);
+}
+
+.barra p:first-child::before {
+  content: "";
+  display: inline-block;
+  width: 0.55cqw;
+  height: 0.55cqw;
+  margin-right: 0.6cqw;
+  background: var(--turquesa);
+  border-radius: 0.12cqw;
+}
+
+/* etiqueta pequena encima del titulo */
+.seccion {
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
+  font-weight: 700;
+  font-size: 1cqw;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--turquesa);
+}
+
+.seccion::before {
+  content: "";
+  width: 2cqw;
+  height: 2px;
+  background: currentColor;
+}
+
+.clara .seccion {
+  color: #0B93A8;
+}
+
+.titular {
+  font-weight: 900;
+  font-size: 3.9cqw;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin-top: 0.8cqw;
+}
+
+:where(.diapositiva) h3 {
+  font-weight: 800;
+  font-size: 1.5cqw;
+  line-height: 1.2;
+}
+
+:where(.diapositiva) p {
+  font-size: 1.2cqw;
+  line-height: 1.45;
+}
+
+:where(.diapositiva) li p,
+:where(.diapositiva) div > p {
+  color: var(--texto-oscuro);
+}
+
+:where(.clara) li p,
+:where(.clara) div > p {
+  color: var(--texto-claro);
+}
+
+.texto-suave {
+  color: var(--texto-oscuro);
+  max-width: 34cqw;
+}
+
+.diapositiva ul,
+.diapositiva ol {
+  list-style: none;
+}
+
+/* entrada suave del contenido al cambiar de diapositiva */
+.diapositiva:not(#portada).activa > * {
+  animation: aparecer 0.7s ease-out both;
+}
+
+.diapositiva:not(#portada).activa > *:nth-child(3) { animation-delay: 0.1s; }
+.diapositiva:not(#portada).activa > *:nth-child(4) { animation-delay: 0.2s; }
+.diapositiva:not(#portada).activa > *:nth-child(5) { animation-delay: 0.3s; }
+
+/* ===== 0. pantalla de espera ===== */
+.intro {
+  align-items: center;
+  justify-content: center;
+  background-image: radial-gradient(rgba(34, 201, 221, 0.07) 1px, transparent 1.4px);
+  background-size: 1.6cqw 1.6cqw;
+}
+
+.intro-centro {
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
+}
+
+.intro-punto {
+  width: 0.8cqw;
+  height: 0.8cqw;
+  border-radius: 50%;
+  background: var(--turquesa);
+  box-shadow: 0 0 1.2cqw var(--turquesa);
+  animation: latir 2s ease-in-out infinite;
+}
+
+@keyframes latir {
+  50% { opacity: 0.25; }
+}
+
+.intro .intro-texto {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 1.5cqw;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: #3A4A62;
+}
+
+.intro .intro-ayuda {
+  position: absolute;
+  bottom: 3.5cqw;
+  font-size: 0.9cqw;
+  color: #2A3850;
+}
+
+/* ===== 2. el problema ===== */
+.problema {
+  flex-direction: row;
+  align-items: center;
+  gap: 6cqw;
+}
+
+.problema-izq {
+  width: 38%;
+}
+
+.problema .titular {
+  font-size: 4.4cqw;
+}
+
+.problema .pregunta {
+  margin-top: 2.5cqw;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 5cqw;
+  line-height: 1;
+  color: #DCE4EE;
+}
+
+.problema-lista {
+  flex: 1;
+}
+
+.problema-lista li {
+  display: grid;
+  grid-template-columns: 6.5cqw 1fr;
+  padding: 2.1cqw 0;
+  border-top: 1px solid var(--linea-clara);
+}
+
+.problema-lista li:last-child {
+  border-bottom: 1px solid var(--linea-clara);
+}
+
+.numero-grande {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 2.8cqw;
+  line-height: 1;
+  color: var(--azul);
+}
+
+.problema-lista h3 {
+  margin-bottom: 0.4cqw;
+}
+
+/* ===== 3. la solucion ===== */
+.solucion {
+  justify-content: center;
+  background: radial-gradient(circle at 85% 90%, rgba(22, 139, 255, 0.16), transparent 45%), var(--negro);
+}
+
+.frase-grande {
+  margin-top: 1.5cqw;
+  font-weight: 900;
+  font-size: 6.4cqw;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+
+.frase-grande span {
+  display: block;
+}
+
+.frase-grande b {
+  color: var(--turquesa);
+}
+
+.frase-grande span:nth-child(2) {
+  color: #C9D5E4;
+}
+
+.frase-grande span:nth-child(3) {
+  color: #93A3B9;
+}
+
+.solucion .solucion-texto {
+  margin-top: 3cqw;
+  font-size: 1.35cqw;
+  color: var(--texto-oscuro);
+}
+
+.solucion-texto strong {
+  color: var(--turquesa);
+}
+
+.solucion-partes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8cqw;
+  margin-top: 1.2cqw;
+}
+
+.solucion-partes li {
+  font-weight: 600;
+  font-size: 1.1cqw;
+  padding: 0.5cqw 1.2cqw;
+  border: 1px solid #22344F;
+  border-radius: 2cqw;
+  color: #DCE6F2;
+}
+
+/* ===== 4. como funciona ===== */
+.recorrido {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2.2cqw;
+  margin-top: 3.4cqw;
+}
+
+/* linea que une los cinco pasos */
+.recorrido::before {
+  content: "";
+  position: absolute;
+  top: 1.6cqw;
+  left: 1.6cqw;
+  right: 12%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--azul), var(--turquesa));
+}
+
+.nodo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.2cqw;
+  height: 3.2cqw;
+  border-radius: 50%;
+  border: 2px solid var(--azul);
+  background: var(--negro);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 1.3cqw;
+}
+
+.recorrido li:last-child .nodo {
+  border-color: var(--turquesa);
+  background: var(--turquesa);
+  color: var(--negro);
+}
+
+.recorrido h3 {
+  margin: 1.4cqw 0 0.4cqw;
+}
+
+.recorrido p {
+  font-size: 1.2cqw;
+}
+
+.codigo {
+  margin-top: 3.6cqw;
+  padding: 1.4cqw 2cqw;
+  background: #0A1222;
+  border: 1px solid #18263D;
+  border-radius: 0.8cqw;
+}
+
+.codigo .codigo-tema {
+  font-size: 0.9cqw;
+  color: var(--gris);
+  margin-bottom: 0.4cqw;
+}
+
+.codigo .codigo-texto {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 1.35cqw;
+  color: #DCE6F2;
+}
+
+.c-clave { color: var(--turquesa); }
+.c-valor { color: #8FC3FF; }
+
+/* ===== 5. tecnologias ===== */
+.tec-cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 4cqw;
+}
+
+.tec-cabeza .titular {
+  max-width: 50cqw;
+}
+
+.tecnologias .nota-lateral {
+  width: 22cqw;
+  font-size: 1.05cqw;
+  color: var(--gris);
+  padding-left: 1cqw;
+  border-left: 2px solid var(--turquesa);
+}
+
+.tec-rejilla {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.6cqw 3.2cqw;
+  margin-top: 3.6cqw;
+}
+
+.tec-rejilla > div {
+  padding-top: 1.2cqw;
+  border-top: 2px solid var(--negro);
+}
+
+.tecnologias .tec-area {
+  font-weight: 700;
+  font-size: 0.9cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--azul);
+}
+
+/* logos de cada tecnologia, con su color oficial */
+.tec-logos {
+  display: flex;
+  gap: 0.9cqw;
+  margin-bottom: 1cqw;
+}
+
+.tec-logos img {
+  width: 2.4cqw;
+  height: 2.4cqw;
+}
+
+.tec-rejilla h3 {
+  font-size: 1.8cqw;
+  margin: 0.4cqw 0 0.5cqw;
+}
+
+.tec-rejilla p {
+  font-size: 1.15cqw;
+}
+
+/* ===== 6. la maqueta ===== */
+.maqueta {
+  flex-direction: row;
+  align-items: center;
+  gap: 5cqw;
+}
+
+.maqueta-izq {
+  width: 32%;
+}
+
+.maqueta .cifra-maqueta {
+  margin: 2.4cqw 0 1.4cqw;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 8cqw;
+  line-height: 0.9;
+  color: var(--blanco-suave);
+}
+
+.cifra-maqueta span {
+  display: block;
+  margin-top: 0.6cqw;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 700;
+  font-size: 1.1cqw;
+  letter-spacing: 0.04em;
+  color: var(--turquesa);
+}
+
+.componentes {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 3cqw;
+}
+
+.componentes li {
+  display: grid;
+  grid-template-columns: 3cqw 1fr;
+  align-content: start;
+  padding: 1.25cqw 0;
+  border-bottom: 1px solid var(--linea-oscura);
+}
+
+.componentes span {
+  grid-row: span 2;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.95cqw;
+  color: var(--turquesa);
+  padding-top: 0.25cqw;
+}
+
+.componentes h3 {
+  font-size: 1.35cqw;
+}
+
+.componentes p {
+  font-size: 1.05cqw;
+  color: #8B9AB0;
+}
+
+/* ===== 7. asi se ve ===== */
+.asi-se-ve {
+  flex-direction: row;
+  align-items: center;
+  gap: 5cqw;
+  background: radial-gradient(circle at 26% 58%, rgba(22, 139, 255, 0.2), transparent 42%), var(--negro);
+}
+
+.celular {
+  margin: 0;
+}
+
+.celular img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 738 / 1600;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 1.6cqw;
+  border: 0.45cqw solid #1A2436;
+  box-shadow: 0 2cqw 4cqw rgba(0, 0, 0, 0.5);
+}
+
+.celular figcaption {
+  margin-top: 0.9cqw;
+  text-align: center;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.95cqw;
+  color: var(--gris);
+}
+
+.celulares-dos {
+  width: 44%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2.5cqw;
+}
+
+.celulares-dos .celular {
+  width: 15cqw;
+}
+
+.celular-frente {
+  margin-top: 4cqw;
+}
+
+.asi-texto {
+  flex: 1;
+}
+
+.lista-check {
+  margin-top: 2.2cqw;
+}
+
+.lista-check li {
+  position: relative;
+  padding: 0.9cqw 0 0.9cqw 2.4cqw;
+  border-bottom: 1px solid var(--linea-oscura);
+  font-size: 1.3cqw;
+  color: #DCE6F2;
+}
+
+/* chulito hecho con dos bordes */
+.lista-check li::before {
+  content: "";
+  position: absolute;
+  left: 0.2cqw;
+  top: 1.35cqw;
+  width: 0.9cqw;
+  height: 0.45cqw;
+  border-left: 0.2cqw solid var(--turquesa);
+  border-bottom: 0.2cqw solid var(--turquesa);
+  transform: rotate(-45deg);
+}
+
+/* ===== 8. el panel ===== */
+.menu-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: 17cqw 1fr;
+  margin-top: 3.6cqw;
+}
+
+/* fondo oscuro de la columna del menu, como en la pagina real */
+.menu-panel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 17cqw;
+  background: var(--negro);
+  border-radius: 1cqw;
+}
+
+.panel .menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 1.05cqw 1.8cqw;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 1.35cqw;
+  color: #8B9AB0;
+}
+
+.panel .menu-item.activo {
+  color: var(--blanco-suave);
+  box-shadow: inset 0.25cqw 0 var(--turquesa);
+  background: rgba(34, 201, 221, 0.1);
+  border-radius: 1cqw 0 0 0;
+}
+
+.panel .menu-desc {
+  display: flex;
+  align-items: center;
+  padding: 1.05cqw 2.4cqw;
+  border-bottom: 1px solid var(--linea-clara);
+  color: #33445C;
+}
+
+/* ===== 9. telegram ===== */
+.telegram {
+  flex-direction: row;
+  align-items: center;
+  gap: 4cqw;
+  background: radial-gradient(circle at 70% 60%, rgba(34, 201, 221, 0.12), transparent 45%), var(--negro);
+}
+
+.telegram-texto {
+  width: 30%;
+}
+
+.telegram .texto-suave {
+  margin-top: 1.6cqw;
+}
+
+.celulares-tres {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2.6cqw;
+}
+
+.celulares-tres .celular {
+  width: 13.5cqw;
+}
+
+.celular-alto {
+  margin-bottom: 3cqw;
+}
+
+.celular figcaption b {
+  display: inline-grid;
+  place-items: center;
+  width: 1.4cqw;
+  height: 1.4cqw;
+  margin-right: 0.4cqw;
+  border-radius: 50%;
+  background: var(--turquesa);
+  color: var(--negro);
+  font-size: 0.8cqw;
+}
+
+/* ===== 10. cierre automatico ===== */
+.cierre {
+  flex-direction: row;
+  align-items: center;
+  gap: 6cqw;
+  background: radial-gradient(circle at 18% 50%, rgba(22, 139, 255, 0.14), transparent 40%), var(--negro);
+}
+
+.cierre-hora {
+  width: 38%;
+}
+
+.cierre .hora {
+  margin: 1.6cqw 0 1.6cqw;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 11cqw;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  color: var(--blanco-suave);
+}
+
+.hora span {
+  margin-left: 0.8cqw;
+  font-size: 2.6cqw;
+  letter-spacing: 0;
+  color: var(--turquesa);
+}
+
+.linea-tiempo {
+  flex: 1;
+  padding-left: 3cqw;
+  border-left: 2px solid #1E3150;
+}
+
+.linea-tiempo li {
+  position: relative;
+  padding: 1.5cqw 0;
+}
+
+/* punto de cada paso sobre la linea */
+.linea-tiempo li::before {
+  content: "";
+  position: absolute;
+  left: -3.55cqw;
+  top: 1.85cqw;
+  width: 0.9cqw;
+  height: 0.9cqw;
+  border-radius: 50%;
+  background: var(--turquesa);
+  box-shadow: 0 0 0 0.4cqw var(--negro);
+}
+
+.linea-tiempo h3 {
+  margin-bottom: 0.4cqw;
+}
+
+.linea-tiempo p {
+  font-size: 1.15cqw;
+}
+
+/* ===== 11. inteligencia artificial ===== */
+.ia-titular {
+  font-size: 5.4cqw;
+}
+
+.subrayado {
+  background: linear-gradient(rgba(34, 201, 221, 0.45), rgba(34, 201, 221, 0.45)) no-repeat 0 88% / 100% 0.3em;
+}
+
+.ia-usos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3.2cqw;
+  margin-top: 3.6cqw;
+}
+
+.ia-usos > div {
+  padding-top: 1.2cqw;
+  border-top: 2px solid var(--azul);
+}
+
+.ia-usos h3 {
+  margin-bottom: 0.5cqw;
+}
+
+.ia-botones {
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
+  margin-top: 2.8cqw;
+}
+
+.ia-botones span {
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 700;
+  font-size: 1cqw;
+  padding: 0.55cqw 1.4cqw;
+  border-radius: 2cqw;
+}
+
+.boton-aceptar {
+  background: var(--negro);
+  color: var(--blanco-suave);
+}
+
+.boton-rechazar {
+  border: 1.5px solid var(--negro);
+}
+
+.ia .ia-botones p {
+  margin-left: 1cqw;
+  font-size: 1.05cqw;
+  color: var(--gris);
+}
+
+/* ===== 12. seguridad ===== */
+.ficha-seguridad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 3.6cqw;
+  border-top: 1px solid var(--linea-oscura);
+  border-left: 1px solid var(--linea-oscura);
+}
+
+.ficha-seguridad > div {
+  padding: 1.9cqw 2.2cqw;
+  border-right: 1px solid var(--linea-oscura);
+  border-bottom: 1px solid var(--linea-oscura);
+}
+
+.ficha-seguridad h3 {
+  font-size: 1.4cqw;
+  margin-bottom: 0.5cqw;
+}
+
+.ficha-seguridad h3::before {
+  content: "";
+  display: block;
+  width: 1.6cqw;
+  height: 0.2cqw;
+  margin-bottom: 1cqw;
+  background: var(--turquesa);
+}
+
+.ficha-seguridad p {
+  font-size: 1.1cqw;
+}
+
+/* ===== 13. pruebas ===== */
+.pruebas {
+  background: #081020;
+}
+
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 4.5cqw 0 0;
+}
+
+.cifras > div {
+  padding: 0 2.2cqw;
+  border-left: 1px solid #22344F;
+}
+
+.cifras > div:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.pruebas .cifra {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 6.6cqw;
+  line-height: 1;
+  color: var(--blanco-suave);
+}
+
+.cifra span {
+  font-size: 3.6cqw;
+  color: var(--turquesa);
+}
+
+.cifras h3 {
+  margin: 1.2cqw 0 0.5cqw;
+  font-size: 1.35cqw;
+  color: var(--turquesa);
+}
+
+.cifras p {
+  font-size: 1.1cqw;
+}
+
+/* ===== 14. dificultades ===== */
+.problemas {
+  display: grid;
+  grid-template-columns: 42% 1fr;
+  margin-top: 3.6cqw;
+}
+
+.dificultades .problemas-cabeza {
+  padding-bottom: 0.8cqw;
+  border-bottom: 2px solid var(--negro);
+  font-weight: 700;
+  font-size: 0.9cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gris);
+}
+
+.dificultades .mal,
+.dificultades .bien {
+  display: flex;
+  align-items: center;
+  padding: 1.1cqw 0;
+  border-bottom: 1px solid var(--linea-clara);
+}
+
+.dificultades .mal {
+  position: relative;
+  padding-right: 3.5cqw;
+  color: var(--texto-claro);
+}
+
+/* flecha entre el problema y la solucion */
+.dificultades .mal::after {
+  content: "→";
+  position: absolute;
+  right: 1.2cqw;
+  color: var(--azul);
+  font-weight: 700;
+}
+
+.dificultades .bien {
+  font-weight: 700;
+  color: var(--negro);
+}
+
+/* ===== 15. gracias ===== */
+.gracias {
+  justify-content: center;
+  padding-left: 7cqw;
+  background: radial-gradient(circle at 72% 50%, rgba(22, 139, 255, 0.18), transparent 40%), var(--negro);
+}
+
+.gracias-texto {
+  position: relative;
+  z-index: 1;
+  width: 48%;
+}
+
+.gracias .equipo-gracias {
+  display: inline-block;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 1.1cqw;
+  letter-spacing: 0.03em;
+  color: var(--negro);
+  background: var(--turquesa);
+  padding: 0.35cqw 1cqw;
+  border-radius: 1cqw;
+}
+
+.gracias-titulo {
+  margin: 1.2cqw 0 1.6cqw;
+  font-weight: 900;
+  font-size: 9cqw;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.gracias .texto-suave {
+  font-size: 1.35cqw;
+}
+
+.gracias .preguntas {
+  margin-top: 2.6cqw;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 2.4cqw;
+  color: var(--turquesa);
+}
+
+.mascota-gracias {
+  position: absolute;
+  right: 3%;
+  top: 50%;
+  width: 44%;
+  transform: translateY(-50%);
+  filter: drop-shadow(0 0 1.5cqw rgba(37, 150, 255, 0.4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diapositiva:not(#portada).activa > *,
+  .intro-punto {
+    animation: none;
+  }
+}

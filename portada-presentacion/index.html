@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AsistIA SENA - Presentación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="diapositivas.css">
+</head>
+<body>
+  <main class="escenario">
+
+    <!-- 0. pantalla de espera antes de la portada -->
+    <section class="diapositiva intro activa">
+      <div class="intro-centro">
+        <span class="intro-punto"></span>
+        <p class="intro-texto">AsistIA SENA</p>
+      </div>
+      <p class="intro-ayuda">Presiona → para iniciar</p>
+    </section>
+
+    <!-- 1. portada -->
+    <section class="diapositiva" id="portada">
+
+      <!-- lineas onduladas muy suaves para que el fondo no se vea plano -->
+      <svg class="ondas" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M-50 120 C 200 40, 380 220, 620 120" />
+        <path d="M-50 170 C 220 90, 400 270, 640 170" />
+        <path d="M-50 220 C 240 140, 420 320, 660 220" />
+        <path d="M980 860 C 1220 760, 1400 900, 1650 780" />
+        <path d="M1000 910 C 1240 810, 1420 950, 1650 830" />
+      </svg>
+
+      <div class="rejilla-puntos"></div>
+
+      <!-- marco LED: el contorno tenue y encima la culebrita de luz.
+           Las capas son el mismo rectangulo con un pedazo de distinto largo:
+           la mas larga es la estela mas suave y la mas corta es la punta brillante -->
+      <svg class="marco-led" viewBox="0 0 1000 488" aria-hidden="true">
+        <rect class="marco-base" x="3" y="3" width="994" height="482" rx="12" pathLength="100" />
+        <rect class="luz estela-1" x="3" y="3" width="994" height="482" rx="12" pathLength="100" />
+        <rect class="luz estela-2" x="3" y="3" width="994" height="482" rx="12" pathLength="100" />
+        <rect class="luz estela-3" x="3" y="3" width="994" height="482" rx="12" pathLength="100" />
+        <rect class="luz estela-4" x="3" y="3" width="994" height="482" rx="12" pathLength="100" />
+        <rect class="luz cuerpo" x="3" y="3" width="994" height="482" rx="12" pathLength="100" />
+        <rect class="luz punta" x="3" y="3" width="994" height="482" rx="12" pathLength="100" />
+      </svg>
+
+      <div class="escaneo"></div>
+
+      <img class="mascota" src="assets/mascota-asistia.png" alt="Mascota de AsistIA saliendo del marco">
+
+      <div class="deteccion" aria-hidden="true">
+        <span class="esquina esquina-1"></span>
+        <span class="esquina esquina-2"></span>
+        <span class="esquina esquina-3"></span>
+        <span class="esquina esquina-4"></span>
+        <p class="aviso-rostro">ROSTRO DETECTADO · A TIEMPO ✓</p>
+      </div>
+
+      <p class="equipo">EQUIPO XCHANGO</p>
+
+      <header class="textos">
+        <h1 class="titulo">Asist<span class="titulo-ia">IA</span> SENA</h1>
+        <p class="descripcion">
+          Asistencia inteligente con reconocimiento facial
+          <span class="separador" aria-hidden="true"></span>
+          <span class="frase">¡La asistencia se toma sola!</span>
+        </p>
+      </header>
+    </section>
+
+    <!-- 2. el problema -->
+    <section class="diapositiva clara problema">
+      <div class="barra"><p>AsistIA SENA</p><p>02 — El problema</p></div>
+      <div class="problema-izq">
+        <p class="seccion">El problema</p>
+        <h2 class="titular">Llamar a lista le quita tiempo a la clase</h2>
+        <p class="pregunta">“¿Presente?”</p>
+      </div>
+      <ol class="problema-lista">
+        <li>
+          <span class="numero-grande">01</span>
+          <div>
+            <h3>Se pierden minutos</h3>
+            <p>Todos los días, al empezar la clase, se gasta tiempo nombrando uno por uno.</p>
+          </div>
+        </li>
+        <li>
+          <span class="numero-grande">02</span>
+          <div>
+            <h3>Alguien responde por otro</h3>
+            <p>Con la lista hablada es fácil que un compañero diga “presente” por el que no llegó.</p>
+          </div>
+        </li>
+        <li>
+          <span class="numero-grande">03</span>
+          <div>
+            <h3>Todo se hace a mano</h3>
+            <p>Después toca pasar el Excel, avisarles a los que faltaron y decidir a quién le toca el aseo.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- 3. la solucion -->
+    <section class="diapositiva solucion">
+      <div class="barra"><p>AsistIA SENA</p><p>03 — La solución</p></div>
+      <p class="seccion">La idea</p>
+      <h2 class="frase-grande">
+        <span>La cámara reconoce<b>.</b></span>
+        <span>La puerta saluda<b>.</b></span>
+        <span>El instructor se entera<b>.</b></span>
+      </h2>
+      <p class="solucion-texto">La asistencia se toma <strong>sola</strong>. AsistIA une:</p>
+      <ul class="solucion-partes">
+        <li>Reconocimiento facial</li>
+        <li>Maqueta con ESP32</li>
+        <li>Servidor</li>
+        <li>Bot de Telegram</li>
+        <li>Inteligencia artificial</li>
+      </ul>
+    </section>
+
+    <!-- 4. como funciona -->
+    <section class="diapositiva funciona">
+      <div class="barra"><p>AsistIA SENA</p><p>04 — Cómo funciona</p></div>
+      <p class="seccion">Cómo funciona</p>
+      <h2 class="titular">De la puerta al panel en segundos</h2>
+      <ol class="recorrido">
+        <li><span class="nodo">1</span><h3>Llega</h3><p>El PIR lo saluda y el ultrasónico prende la cámara.</p></li>
+        <li><span class="nodo">2</span><h3>Cámara</h3><p>Python y OpenCV reconocen la cara en el celular.</p></li>
+        <li><span class="nodo">3</span><h3>MQTT</h3><p>Se manda quién llegó, a qué hora y si fue a tiempo.</p></li>
+        <li><span class="nodo">4</span><h3>Maqueta</h3><p>El ESP32 muestra el nombre, prende el LED y abre la talanquera.</p></li>
+        <li><span class="nodo">5</span><h3>Servidor</h3><p>Guarda la llegada y sale en el panel del instructor.</p></li>
+      </ol>
+      <div class="codigo">
+        <p class="codigo-tema">tema · sena/asistencia/registro</p>
+        <p class="codigo-texto">{ <span class="c-clave">"nombre"</span>: <span class="c-valor">"yeferson najar"</span>, <span class="c-clave">"hora"</span>: <span class="c-valor">"12:25"</span>, <span class="c-clave">"estado"</span>: <span class="c-valor">"A_TIEMPO"</span> }</p>
+      </div>
+    </section>
+
+    <!-- 5. tecnologias -->
+    <section class="diapositiva clara tecnologias">
+      <div class="barra"><p>AsistIA SENA</p><p>05 — Tecnologías</p></div>
+      <div class="tec-cabeza">
+        <div>
+          <p class="seccion">Tecnologías</p>
+          <h2 class="titular">Cada parte con la herramienta que le sirve</h2>
+        </div>
+        <p class="nota-lateral">Los datos se guardan en archivos JSON, sin base de datos.</p>
+      </div>
+      <div class="tec-rejilla">
+        <div>
+          <div class="tec-logos"><img src="assets/logos/python.svg" alt="Logo de Python"><img src="assets/logos/opencv.svg" alt="Logo de OpenCV"></div>
+          <p class="tec-area">Cámara</p><h3>Python + OpenCV</h3><p>El detector Haar encuentra la cara y el reconocedor LBPH dice quién es.</p>
+        </div>
+        <div>
+          <div class="tec-logos"><img src="assets/logos/espressif.svg" alt="Logo de Espressif, fabricante del ESP32"></div>
+          <p class="tec-area">Maqueta</p><h3>ESP32</h3><p>Programado en C++ con PlatformIO: lee los sensores y mueve la talanquera.</p>
+        </div>
+        <div>
+          <div class="tec-logos"><img src="assets/logos/mqtt.svg" alt="Logo de MQTT"></div>
+          <p class="tec-area">Comunicación</p><h3>MQTT con EMQX</h3><p>Así se hablan la cámara, la maqueta y el servidor, con conexión cifrada.</p>
+        </div>
+        <div>
+          <div class="tec-logos"><img src="assets/logos/nestjs.svg" alt="Logo de NestJS"><img src="assets/logos/typescript.svg" alt="Logo de TypeScript"></div>
+          <p class="tec-area">Servidor</p><h3>NestJS</h3><p>En TypeScript: guarda las llegadas y revisa el horario cada minuto.</p>
+        </div>
+        <div>
+          <div class="tec-logos"><img src="assets/logos/telegram.svg" alt="Logo de Telegram"><img src="assets/logos/googlegemini.svg" alt="Logo de Gemini"></div>
+          <p class="tec-area">Mensajes</p><h3>Telegram + Gemini</h3><p>El bot les avisa a todos y la inteligencia artificial ayuda con las excusas.</p>
+        </div>
+        <div>
+          <div class="tec-logos"><img src="assets/logos/html5.svg" alt="Logo de HTML5"><img src="assets/logos/css3.svg" alt="Logo de CSS3"><img src="assets/logos/javascript.svg" alt="Logo de JavaScript"></div>
+          <p class="tec-area">Panel</p><h3>HTML, CSS y JS</h3><p>La página del instructor, con modo oscuro y versión para celular.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. la maqueta -->
+    <section class="diapositiva maqueta">
+      <div class="barra"><p>AsistIA SENA</p><p>06 — La maqueta</p></div>
+      <div class="maqueta-izq">
+        <p class="seccion">La maqueta</p>
+        <h2 class="titular">La estación de la puerta</h2>
+        <p class="cifra-maqueta">8<span>partes trabajando juntas</span></p>
+        <p class="texto-suave">El ESP32 lee los sensores, maneja las pantallas y abre la talanquera. La cámara es el celular, a la altura de la cara.</p>
+      </div>
+      <ul class="componentes">
+        <li><span>01</span><h3>Cámara (celular)</h3><p>Reconoce la cara con DroidCam</p></li>
+        <li><span>02</span><h3>Sensor PIR</h3><p>Detecta movimiento y saluda en la pantalla</p></li>
+        <li><span>03</span><h3>Ultrasónico</h3><p>Prende la cámara y cuenta las personas que pasan</p></li>
+        <li><span>04</span><h3>Sensor táctil</h3><p>Abre o cierra la asistencia</p></li>
+        <li><span>05</span><h3>LCD y OLED</h3><p>Muestran el nombre y si llegó a tiempo o tarde</p></li>
+        <li><span>06</span><h3>LED verde y rojo</h3><p>Verde: a tiempo · Rojo: tarde o no registrado</p></li>
+        <li><span>07</span><h3>Servo</h3><p>Abre la talanquera 3 segundos</p></li>
+        <li><span>08</span><h3>Relé</h3><p>Prende la luz del salón</p></li>
+      </ul>
+    </section>
+
+    <!-- 7. asi se ve -->
+    <section class="diapositiva asi-se-ve">
+      <div class="barra"><p>AsistIA SENA</p><p>07 — Así se ve</p></div>
+      <div class="celulares-dos">
+        <figure class="celular celular-atras">
+          <img src="assets/login.jpg" alt="Pantalla de inicio de sesión de AsistIA en un celular">
+          <figcaption>Inicio de sesión</figcaption>
+        </figure>
+        <figure class="celular celular-frente">
+          <img src="assets/panel.jpg" alt="Panel de AsistIA con la asistencia de hoy en un celular">
+          <figcaption>Asistencia de hoy</figcaption>
+        </figure>
+      </div>
+      <div class="asi-texto">
+        <p class="seccion">Así se ve</p>
+        <h2 class="titular">El panel, en el celular del instructor</h2>
+        <ul class="lista-check">
+          <li>Login con usuario y clave</li>
+          <li>Llegadas al instante, cada 2 segundos</li>
+          <li>A tiempo, tarde y ausentes con su número</li>
+          <li>Modo claro y oscuro</li>
+          <li>Diseño propio para celular</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 8. el panel -->
+    <section class="diapositiva clara panel">
+      <div class="barra"><p>AsistIA SENA</p><p>08 — El panel</p></div>
+      <div class="panel-cabeza">
+        <p class="seccion">El panel del instructor</p>
+        <h2 class="titular">Todo lo de la clase en una página</h2>
+      </div>
+      <div class="menu-panel">
+        <p class="menu-item activo">Hoy</p>
+        <p class="menu-desc">Quién va llegando, en vivo, y el horario que el instructor puede cambiar.</p>
+        <p class="menu-item">Historial</p>
+        <p class="menu-desc">Cada día de clase con su detalle y su Excel para descargar.</p>
+        <p class="menu-item">Aprendices</p>
+        <p class="menu-desc">Fallas y llegadas tarde de cada uno, con alerta desde 3 fallas seguidas.</p>
+        <p class="menu-item">Aseo</p>
+        <p class="menu-desc">El calendario de quién hace aseo y qué tarea le toca.</p>
+        <p class="menu-item">Chat AsistIA</p>
+        <p class="menu-desc">Preguntas como “¿quién ha faltado más este mes?”.</p>
+        <p class="menu-item">Login</p>
+        <p class="menu-desc">Solo el instructor entra, con su usuario y su clave.</p>
+      </div>
+    </section>
+
+    <!-- 9. telegram -->
+    <section class="diapositiva telegram">
+      <div class="barra"><p>AsistIA SENA</p><p>09 — Telegram</p></div>
+      <div class="telegram-texto">
+        <p class="seccion">El bot de Telegram</p>
+        <h2 class="titular">AsistIA ADSO les escribe a todos</h2>
+        <p class="texto-suave">Al instructor le llega el resumen, al que faltó le pide la excusa y el instructor la acepta o la rechaza.</p>
+      </div>
+      <div class="celulares-tres">
+        <figure class="celular">
+          <img src="assets/telegram-resumen.jpg" alt="Chat de Telegram con el resumen de asistencia y el Excel adjunto">
+          <figcaption><b>1</b> Resumen y Excel</figcaption>
+        </figure>
+        <figure class="celular celular-alto">
+          <img src="assets/telegram-aviso.jpg" alt="Mensaje del bot a un aprendiz que no asistió">
+          <figcaption><b>2</b> Aviso al que faltó</figcaption>
+        </figure>
+        <figure class="celular">
+          <img src="assets/telegram-excusa.jpg" alt="Chat donde el aprendiz manda su excusa y el instructor la acepta">
+          <figcaption><b>3</b> Excusa aceptada</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 10. cierre automatico -->
+    <section class="diapositiva cierre">
+      <div class="barra"><p>AsistIA SENA</p><p>10 — Cierre automático</p></div>
+      <div class="cierre-hora">
+        <p class="seccion">Cierre automático</p>
+        <p class="hora">6:00<span>p. m.</span></p>
+        <p class="texto-suave">A esa hora la asistencia se cierra sola. El instructor también puede cerrarla antes desde el panel, con una ventana para confirmar.</p>
+      </div>
+      <ol class="linea-tiempo">
+        <li>
+          <h3>Telegram a cada ausente</h3>
+          <p>“Hoy no asististe a clase. ¿Qué pasó? Responde con tu excusa.”</p>
+        </li>
+        <li>
+          <h3>Resumen y Excel al instructor</h3>
+          <p>Cuántos llegaron a tiempo, tarde y quiénes faltaron, con el archivo adjunto.</p>
+        </li>
+        <li>
+          <h3>Aseo para los 3 últimos que llegaron tarde</h3>
+          <p>Trapero, escoba y trapito, publicado en el grupo. Si no alcanzan, se completa con ausentes.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- 11. inteligencia artificial -->
+    <section class="diapositiva clara ia">
+      <div class="barra"><p>AsistIA SENA</p><p>11 — Inteligencia artificial</p></div>
+      <p class="seccion">Inteligencia artificial</p>
+      <h2 class="titular ia-titular">Gemini aconseja,<br>el instructor <span class="subrayado">decide</span>.</h2>
+      <div class="ia-usos">
+        <div><h3>Excusas</h3><p>Resume lo que escribió el ausente y sugiere si la excusa es válida o no.</p></div>
+        <div><h3>Permisos de salida</h3><p>Redacta bien el motivo y aconseja si aceptarlo. El Excel del permiso llega por correo.</p></div>
+        <div><h3>Chat del panel</h3><p>Responde preguntas sobre la asistencia con los datos reales de la ficha.</p></div>
+      </div>
+      <div class="ia-botones">
+        <span class="boton-aceptar">Aceptar</span>
+        <span class="boton-rechazar">Rechazar</span>
+        <p>La última palabra siempre es del instructor, con estos dos botones.</p>
+      </div>
+    </section>
+
+    <!-- 12. seguridad -->
+    <section class="diapositiva seguridad">
+      <div class="barra"><p>AsistIA SENA</p><p>12 — Seguridad</p></div>
+      <p class="seccion">Seguridad</p>
+      <h2 class="titular">Lo que protege el sistema</h2>
+      <div class="ficha-seguridad">
+        <div><h3>Login del instructor</h3><p>Sin usuario y clave no se ven los datos ni se cierra la asistencia.</p></div>
+        <div><h3>Revisión en el servidor</h3><p>Aunque llamen la API directo, sin sesión responde 401 (no autorizado).</p></div>
+        <div><h3>Claves en el archivo .env</h3><p>No quedan escritas en el código ni se suben a GitHub.</p></div>
+        <div><h3>MQTT cifrado con TLS</h3><p>Los mensajes viajan cifrados hasta el broker.</p></div>
+        <div><h3>Función limpiar()</h3><p>Lo que escribe un aprendiz no se ejecuta como código en la página.</p></div>
+        <div><h3>Ventana de confirmación</h3><p>Pregunta antes de cerrar, porque los mensajes no se pueden borrar.</p></div>
+      </div>
+    </section>
+
+    <!-- 13. pruebas -->
+    <section class="diapositiva pruebas">
+      <div class="barra"><p>AsistIA SENA</p><p>13 — Pruebas</p></div>
+      <p class="seccion">Pruebas</p>
+      <h2 class="titular">Así comprobamos que funciona</h2>
+      <div class="cifras">
+        <div><p class="cifra">6<span>/6</span></p><h3>Pruebas automáticas</h3><p>Pasan todas: la regla del aseo y las fechas.</p></div>
+        <div><p class="cifra">9</p><h3>Tamaños de pantalla</h3><p>Del celular al computador, sin que nada se salga.</p></div>
+        <div><p class="cifra">52</p><h3>Límite de distancia</h3><p>Los registrados dan entre 36 y 49; el que no está registrado sale NO REGISTRADO.</p></div>
+        <div><p class="cifra">8:30</p><h3>Prueba del horario</h3><p>A las 8:29 salió A TIEMPO y desde las 8:30, TARDE.</p></div>
+      </div>
+    </section>
+
+    <!-- 14. dificultades -->
+    <section class="diapositiva clara dificultades">
+      <div class="barra"><p>AsistIA SENA</p><p>14 — Dificultades</p></div>
+      <p class="seccion">Dificultades</p>
+      <h2 class="titular">Lo que salió mal y cómo lo arreglamos</h2>
+      <div class="problemas">
+        <p class="problemas-cabeza">Problema</p>
+        <p class="problemas-cabeza">Cómo lo solucionamos</p>
+        <p class="mal">OpenCV 5 ya no traía el detector de caras</p>
+        <p class="bien">Usamos OpenCV 4, que sí lo trae</p>
+        <p class="mal">El ESP32 no se conectaba al hotspot</p>
+        <p class="bien">Borramos la memoria del ESP32 y volvimos a subir el código</p>
+        <p class="mal">El antivirus bloqueaba la conexión a MQTT</p>
+        <p class="bien">La cámara y el servidor usan los certificados de confianza de Windows</p>
+        <p class="mal">Confundía a una persona con otra</p>
+        <p class="bien">Cámara del celular, fotos nuevas, límite de 52 y 12 confirmaciones</p>
+        <p class="mal">Los sensores contaban de más</p>
+        <p class="bien">El ultrasónico pide 5 lecturas seguidas y el táctil espera 1 segundo</p>
+      </div>
+    </section>
+
+    <!-- 15. gracias -->
+    <section class="diapositiva gracias">
+      <div class="gracias-texto">
+        <p class="equipo-gracias">EQUIPO XCHANGO</p>
+        <h2 class="gracias-titulo">¡Gracias!</h2>
+        <p class="texto-suave">AsistIA junta Python, electrónica, MQTT, un servidor, Telegram e inteligencia artificial para que la asistencia no le quite tiempo a la clase.</p>
+        <p class="preguntas">¿Preguntas?</p>
+      </div>
+      <img class="mascota-gracias" src="assets/mascota-asistia.png" alt="Mascota de AsistIA despidiéndose">
+    </section>
+
+  </main>
+
+  <audio id="musica-intro" src="assets/intro.mp3" preload="auto"></audio>
+
+  <script src="presentacion.js"></script>
+</body>
+</html>

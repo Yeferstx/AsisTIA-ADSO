@@ -1,0 +1,352 @@
+:root {
+  --negro: #05070C;
+  --turquesa: #22C9DD;
+  --azul-led: #008CFF;
+  --punta-led: #8BEFFF;
+  --marco-tenue: #123047;
+  --blanco: #FFFFFF;
+  /* ajustes de la animacion LED */
+  --vuelta: 6s;
+  --grosor: 3;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* la pagina solo muestra la diapositiva centrada, sin barras de desplazamiento */
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--negro);
+  overflow: hidden;
+}
+
+/* diapositiva 16:9 que se ajusta a la pantalla sin deformarse.
+   container-type permite medir todo con cqw (1cqw = 1% del ancho de la diapositiva),
+   asi la composicion se ve igual en cualquier tamano */
+.escenario {
+  position: relative;
+  width: min(100vw, 177.78vh);
+  aspect-ratio: 16 / 9;
+  background: var(--negro);
+  overflow: hidden;
+  container-type: inline-size;
+  font-family: 'Nunito', Arial, sans-serif;
+}
+
+/* todas las diapositivas estan una encima de otra y solo se ve la activa */
+.diapositiva {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--negro);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease, visibility 0.6s;
+}
+
+.diapositiva.activa {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* fondo: lineas onduladas casi invisibles en los extremos */
+.ondas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: 0.08;
+}
+
+.ondas path {
+  fill: none;
+  stroke: #3D7BD9;
+  stroke-width: 2;
+}
+
+/* marco LED detras del muneco */
+.marco-led {
+  position: absolute;
+  left: 20%;
+  top: 9%;
+  width: 60%;
+  height: auto;
+  z-index: 1;
+  overflow: visible;
+  filter: drop-shadow(0 0 0.3cqw rgba(0, 140, 255, 1)) drop-shadow(0 0 1cqw rgba(0, 140, 255, 0.6));
+}
+
+.marco-led rect {
+  fill: none;
+  stroke-width: var(--grosor);
+}
+
+.marco-base {
+  stroke: var(--marco-tenue);
+}
+
+/* culebrita: el contorno mide 100 (por pathLength="100").
+   stroke-dasharray "0 vacio luz 0" deja la luz al final del recorrido,
+   asi todas las capas terminan en la misma punta: las largas y suaves
+   quedan detras como estela y la corta y clara va adelante */
+.luz {
+  stroke: var(--azul-led);
+  stroke-linecap: round;
+  animation: culebrita var(--vuelta) linear infinite;
+}
+
+/* mover el dashoffset de 0 a -100 hace que la luz de una vuelta completa */
+@keyframes culebrita {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
+}
+
+.estela-1 { stroke-dasharray: 0 66 34 0; opacity: 0.25; }
+.estela-2 { stroke-dasharray: 0 76 24 0; opacity: 0.45; }
+.estela-3 { stroke-dasharray: 0 85 15 0; opacity: 0.7; }
+.estela-4 { stroke-dasharray: 0 92 8 0; opacity: 0.9; }
+.cuerpo { stroke-dasharray: 0 96.5 3.5 0; }
+
+.punta {
+  stroke-dasharray: 0 99.4 0.6 0;
+  stroke: var(--punta-led);
+  stroke-width: calc(var(--grosor) * 2);
+}
+
+/* el muneco va encima del titulo (z-index 4) para que tape un poco las letras,
+   como si se saliera de la pantalla */
+.mascota {
+  position: absolute;
+  left: 30.5%;
+  top: 6%;
+  width: 49%;
+  height: auto;
+  z-index: 4;
+  filter: drop-shadow(0 0 1.5cqw rgba(37, 150, 255, 0.4)) drop-shadow(0 1.5cqw 1.5cqw rgba(0, 0, 0, 0.7));
+}
+
+/* las animaciones de la portada arrancan cuando la diapositiva se vuelve activa */
+.activa .mascota {
+  animation: salir-pantalla 1.2s cubic-bezier(0.2, 0.9, 0.3, 1.2) 1.5s both;
+}
+
+/* entra pequeno y escondido dentro del marco y salta hacia el espectador */
+@keyframes salir-pantalla {
+  0% {
+    opacity: 0;
+    transform: translate(-4%, -12%) scale(0.35);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* el titulo sube suave antes de que salte el muneco */
+.activa .textos {
+  animation: aparecer 0.8s ease-out both;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(2cqw);
+  }
+}
+
+/* el marco se prende parpadeando como un neon al entrar a la portada */
+.activa .marco-led,
+.activa .rejilla-puntos {
+  animation: prender-neon 0.9s linear both;
+}
+
+@keyframes prender-neon {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  20% { opacity: 0.1; }
+  35% { opacity: 1; }
+  45% { opacity: 0.3; }
+  60%, 100% { opacity: 1; }
+}
+
+/* rejilla de puntos tenue dentro del marco, como una pantalla */
+.rejilla-puntos {
+  position: absolute;
+  left: 20%;
+  top: 9%;
+  width: 60%;
+  height: 52%;
+  z-index: 1;
+  border-radius: 0.8cqw;
+  background-image: radial-gradient(rgba(34, 201, 221, 0.16) 1px, transparent 1.4px);
+  background-size: 1.6cqw 1.6cqw;
+}
+
+/* linea de escaneo: baja una vez por el marco antes de que salga el muneco */
+.escaneo {
+  position: absolute;
+  left: 20.4%;
+  width: 59.2%;
+  top: 9%;
+  height: 0.25cqw;
+  z-index: 2;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--turquesa), transparent);
+  box-shadow: 0 0 1.2cqw var(--turquesa);
+}
+
+.activa .escaneo {
+  animation: escanear 1.3s ease-in-out 0.4s both;
+}
+
+@keyframes escanear {
+  0% { top: 9.5%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 60%; opacity: 0; }
+}
+
+/* cuadro de rostro detectado: cuatro esquinas sobre la cara del muneco */
+.deteccion {
+  position: absolute;
+  left: 45%;
+  top: 22.5%;
+  width: 22.4%;
+  height: 21%;
+  z-index: 5;
+  opacity: 0;
+}
+
+.esquina {
+  position: absolute;
+  width: 1.6cqw;
+  height: 1.6cqw;
+  border: 0.22cqw solid var(--turquesa);
+}
+
+.esquina-1 { top: 0; left: 0; border-right: none; border-bottom: none; }
+.esquina-2 { top: 0; right: 0; border-left: none; border-bottom: none; }
+.esquina-3 { bottom: 0; left: 0; border-right: none; border-top: none; }
+.esquina-4 { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+.aviso-rostro {
+  position: absolute;
+  left: calc(100% + 0.8cqw);
+  top: 0;
+  white-space: nowrap;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.95cqw;
+  letter-spacing: 0.08em;
+  color: var(--negro);
+  background: var(--turquesa);
+  padding: 0.3cqw 0.7cqw;
+  border-radius: 0.3cqw;
+}
+
+.activa .deteccion {
+  animation: detectar 0.5s ease-out 3.2s both;
+}
+
+@keyframes detectar {
+  from {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* etiqueta a la izquierda, separada del marco unos 20px (1.2cqw) */
+.equipo {
+  position: absolute;
+  right: calc(80% + 1.2cqw);
+  top: 54%;
+  z-index: 3;
+  font-weight: 800;
+  font-size: 1.25cqw;
+  letter-spacing: 0.03em;
+  color: var(--negro);
+  background: var(--turquesa);
+  padding: 0.4cqw 1.1cqw;
+  border-radius: 1cqw;
+}
+
+/* titulo y textos centrados, encima de todo */
+.textos {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 0.9cqw, 24px);
+}
+
+.titulo {
+  font-weight: 900;
+  font-size: 12.4cqw;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--blanco);
+  white-space: nowrap;
+}
+
+.titulo-ia {
+  color: var(--turquesa);
+}
+
+.descripcion {
+  display: flex;
+  align-items: center;
+  gap: 2.2cqw;
+  font-weight: 600;
+  font-size: 1.85cqw;
+  color: var(--blanco);
+}
+
+.separador {
+  width: 0.16cqw;
+  height: 2cqw;
+  background: var(--turquesa);
+}
+
+.frase {
+  font-weight: 700;
+  color: var(--turquesa);
+}
+
+/* si la persona tiene activado "reducir movimiento", la luz queda quieta */
+@media (prefers-reduced-motion: reduce) {
+  .luz,
+  .activa .mascota,
+  .activa .textos,
+  .activa .escaneo,
+  .activa .marco-led,
+  .activa .rejilla-puntos {
+    animation: none;
+  }
+
+  .activa .deteccion {
+    animation: none;
+    opacity: 1;
+  }
+
+  .diapositiva {
+    transition: none;
+  }
+}
