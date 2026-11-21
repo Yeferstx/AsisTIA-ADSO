@@ -31,20 +31,22 @@ Todo se comunica por MQTT con un broker de EMQX (con TLS).
 | Topic | Quien publica | Mensaje |
 |---|---|---|
 | `sena/asistencia/registro` | reconocer.py | `{"nombre": "...", "hora": "12:25:10", "estado": "A_TIEMPO"}` |
-| `sena/asistencia/control` | bot, tactil del ESP32 | `ABRIR` o `CERRAR` |
+| `sena/asistencia/control` | bot, tactil del ESP32 | `ABRIR`, `CERRAR` o `APAGAR_LUZ` |
 | `sena/asistencia/presencia` | ESP32 | `DETECTADO` |
 | `sena/asistencia/conteo` | ESP32 | numero de personas |
-| `sena/asistencia/led` | pagina web | `ENCENDER_VERDE`, `APAGAR_VERDE`, `ENCENDER_ROJO`, `APAGAR_ROJO` |
 | `sena/asistencia/led/estado` | ESP32 | `{"verde": true, "rojo": false}` |
 
 ## Horario
 
+Por defecto:
+
 - 12:00 se abre la asistencia
 - 12:30 entrada, despues de esa hora es TARDE
 - 5:00 pm recordatorio del aseo en el grupo
+- 5:30 pm salida, se apaga la luz del salon
 - 6:00 pm se cierra la asistencia
 
-Las horas se cambian en `servidor/src/telegram/asistencia.ts`.
+El instructor lo cambia desde la pagina (se guarda en `servidor/datos/horario.json`). `reconocer.py` le pregunta el horario al servidor cada minuto para saber desde que hora es TARDE.
 
 ## Archivo .env
 
@@ -59,7 +61,15 @@ TELEGRAM_TOKEN=
 TELEGRAM_CHAT_INSTRUCTOR=
 TELEGRAM_GRUPO=
 GEMINI_API_KEY=
+CORREO_USUARIO=
+CORREO_CLAVE=
+CORREO_REMITENTE=
+CORREO_INSTRUCTOR=
+INSTRUCTOR_USUARIO=
+INSTRUCTOR_CLAVE=
 ```
+
+`INSTRUCTOR_USUARIO` e `INSTRUCTOR_CLAVE` son el usuario y la clave para entrar a la pagina web.
 
 La clave de Gemini se saca en https://aistudio.google.com/apikey. El token se saca con @BotFather en Telegram. El chat del instructor se puede ver con @userinfobot y el del grupo sale en la consola del servidor cuando escriben `/ayuda` en el grupo (es un numero negativo).
 
@@ -83,6 +93,19 @@ Si sale `No module named 'cv2'` es porque no se esta usando el python del venv.
 - Si sale NO REGISTRADO es mejor volver a tomar las fotos con la misma luz del salon y entrenar otra vez.
 - `reconocer.py` reconoce y publica en MQTT. Con ESC se sale.
 - `escuchar.py` es para probar, muestra todo lo que llega al broker.
+- `simulador_esp32.py` hace de ESP32 para probar sin la maqueta, responde el estado de los LED igual que la placa.
+
+### Como funciona la camara
+
+1. `reconocer.py` se conecta al broker MQTT y se queda esperando el mensaje `DETECTADO` en `sena/asistencia/presencia`, que lo manda el ultrasonico del ESP32 cuando alguien se acerca.
+2. Cuando llega ese mensaje prende la camara. Se usa la del celular con DroidCam (la direccion va en `CAMARA`), si se pone `0` usa la del portatil. Si en 20 segundos no ve ninguna cara la apaga otra vez.
+3. Cada imagen se pasa a gris y el detector Haar (`haarcascade_frontalface_default.xml`) busca caras. Solo se usa la cara mas grande, que es la de quien esta mas cerca, y las de menos de 200 px no se tienen en cuenta.
+4. La cara se recorta a 200x200 y el reconocedor LBPH (`modelo.yml`) dice de quien se parece y una distancia. Entre mas baja la distancia mas se parece: si es menor a 52 es el aprendiz, si no es NO REGISTRADO.
+5. Para no equivocarse tiene que salir la misma persona 12 veces seguidas. Mientras tanto en pantalla sale "Verificando...".
+6. Cuando se confirma, se mira la hora: si es antes de la hora de entrada es A_TIEMPO y si no es TARDE. La hora de entrada se la pregunta al servidor cada minuto en `/api/horario`.
+7. Publica en `sena/asistencia/registro` el JSON con nombre, hora y estado. Cada aprendiz se publica una sola vez por dia. Los desconocidos se publican maximo cada 10 segundos para no llenar el broker.
+
+El modelo se entrena con `entrenar.py` usando las 50 fotos de cada aprendiz que toma `capturar_rostros.py`.
 
 ## ESP32
 
@@ -142,14 +165,32 @@ npm run start:dev
 
 Los datos se guardan en archivos JSON en `servidor/datos/` (aprendices, asistencia, aseo y excusas).
 
-La pagina web queda en http://localhost:3000
+La pagina web queda en http://localhost:3000 y pide el usuario y la clave del instructor.
+
+Para abrirla desde el celular en el mismo wifi se usa la IP del computador, por ejemplo http://192.168.1.18:3000
+
+Las pruebas del servidor se corren con `npm test`.
+
+### Como se conecta Telegram
+
+1. Se crea el bot con @BotFather y el token se pone en `TELEGRAM_TOKEN` del `.env`.
+2. Cuando arranca el servidor, `telegram.service.ts` crea el bot con `node-telegram-bot-api` en modo polling, o sea que cada rato le pregunta a Telegram si hay mensajes nuevos. Por eso no necesita IP publica ni dominio, funciona en el computador.
+3. Cada comando (`/start`, `/hoy`, `/fallas`...) tiene su `onText`. Los mensajes que no son comandos se toman como la excusa del ausente o como la respuesta del permiso.
+4. Los botones (elegir nombre, Aceptar y Rechazar) llegan por `callback_query`. Segun como empieza el dato (`excusa:` o `permiso:`) se sabe que boton fue.
+5. Para saber quien es quien, el aprendiz da `/start` y elige su nombre en unos botones. Su chat queda guardado en `servidor/datos/aprendices.json` y asi el bot le puede escribir despues. El instructor se reconoce porque su chat es el de `TELEGRAM_CHAT_INSTRUCTOR`.
+6. El servidor tambien se conecta al broker MQTT y escucha `sena/asistencia/registro`. Cuando llega una cara reconocida guarda la llegada en `asistencia.json` y sale en la pagina.
+7. Con `node-cron` cada minuto revisa el horario: a la hora de apertura publica `ABRIR`, a la salida `APAGAR_LUZ`, a las 5 pm recuerda el aseo y a la hora de cierre cierra la asistencia y manda todos los mensajes.
+8. Las excusas y permisos se le mandan a Gemini (`gemini.ts`) con la clave `GEMINI_API_KEY`. Si Gemini no responde se prueba con otro modelo y si tampoco, el instructor decide sin el resumen.
 
 ### Pagina web
 
-- Lista en tiempo real de quien llego, a que hora y si fue a tiempo o tarde (se actualiza sola cada 2 segundos).
-- Estado de los LED de la maqueta e interruptores para prenderlos y apagarlos.
-- Botones para generar el Excel, hacer el sorteo del aseo y enviar los Telegram.
-- Excusas por revisar con el resumen de Gemini y botones para aceptar o rechazar.
+- **Hoy**: quien llego, a que hora y si fue a tiempo o tarde (se actualiza sola cada 2 segundos), cuantos faltan, horario editable, permisos y excusas con el resumen de Gemini.
+- **Historial**: los dias de clase, el detalle de cada dia y su Excel.
+- **Aprendices**: asistencias, tardes, fallas, fallas seguidas (riesgo desde 3) y si ya le dio /start al bot.
+- **Aseo**: calendario de quien hace aseo y que tarea.
+- Boton para descargar el Excel de hoy y boton para cerrar la asistencia (pregunta antes de cerrar).
+- Chat con AsistIA (Gemini) para preguntar cosas de la asistencia.
+- Modo claro y oscuro, y diseno para celular.
 
 ### Comandos del bot
 
@@ -157,6 +198,7 @@ Aprendiz:
 - `/start` registrarse eligiendo su nombre
 - `/fallas` cuantas fallas y llegadas tarde lleva
 - `/aseo` si le toca aseo, que dia y que tarea
+- `/permiso` pedir permiso de salida (el Excel del permiso le llega al instructor por correo)
 - `/ayuda` lista de comandos
 
 Instructor:
@@ -169,7 +211,7 @@ Instructor:
 
 - Cuando se cierra la asistencia le escribe a cada ausente para que mande su excusa.
 - La excusa la resume Gemini y sugiere si es VALIDA o NO VALIDA, pero el que decide es el instructor con los botones Aceptar o Rechazar (en Telegram o en la pagina). Al aprendiz le llega la respuesta.
-- Sortea el aseo entre los que llegaron tarde (si no alcanzan se completa con los ausentes): Trapero, Escoba y Trapito.
+- El aseo le toca a los 3 ultimos que llegaron tarde (si no alcanzan se completa con ausentes al azar): Trapero, Escoba y Trapito.
 - Si alguien completa 3 fallas seguidas le avisa al instructor por riesgo de desercion.
 - Si alguien lleva 2 llegadas tarde en la semana le manda un mensaje de animo.
 - Si en un dia no llega nadie no cierra la asistencia (festivo).
