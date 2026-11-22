@@ -4,17 +4,21 @@ let actual = 0;
 
 // musica de entrada: suena al pasar de la pantalla de espera a la portada
 const musica = document.getElementById("musica-intro");
+// se guardan para poder pararlos si se vuelve a entrar a la portada
+let subida = null;
+let bajada = null;
+let esperaApagar = null;
 
 // cambia el volumen poco a poco hasta llegar al volumen que se pide
 function cambiarVolumen(destino, paso) {
-  const intervalo = setInterval(function () {
+  subida = setInterval(function () {
     if (musica.volume < destino - paso) {
       musica.volume = musica.volume + paso;
     } else if (musica.volume > destino + paso) {
       musica.volume = musica.volume - paso;
     } else {
       musica.volume = destino;
-      clearInterval(intervalo);
+      clearInterval(subida);
       if (destino === 0) {
         musica.pause();
       }
@@ -22,29 +26,32 @@ function cambiarVolumen(destino, paso) {
   }, 50);
 }
 
-// apaga la musica multiplicando el volumen por 0.93 cada vez:
+// apaga la musica multiplicando el volumen por 0.88 cada vez:
 // al final baja cada vez mas despacito, y asi se pierde sin notarse
 function apagarSuave() {
-  const intervalo = setInterval(function () {
+  bajada = setInterval(function () {
     if (musica.volume > 0.005) {
-      musica.volume = musica.volume * 0.93;
+      musica.volume = musica.volume * 0.88;
     } else {
       musica.volume = 0;
       musica.pause();
-      clearInterval(intervalo);
+      clearInterval(bajada);
     }
   }, 50);
 }
 
 function empezarMusica() {
+  clearInterval(subida);
+  clearInterval(bajada);
+  clearTimeout(esperaApagar);
   musica.currentTime = 0;
   musica.volume = 0;
   // si el navegador no deja sonar el audio, la presentacion sigue normal
   musica.play().catch(function () {});
-  // entra subiendo suave
-  cambiarVolumen(1, 0.1);
-  // a los 2.5 segundos se empieza a apagar suave, y en unos 3.5 segundos mas ya no suena
-  setTimeout(apagarSuave, 2500);
+  // sube rapido para que el primer golpe (0.35 s) ya suene completo
+  cambiarVolumen(1, 0.25);
+  // se apaga despues del segundo golpe (3.35 s) y termina antes del tercero (6.3 s)
+  esperaApagar = setTimeout(apagarSuave, 4000);
 }
 
 function mostrar(numero) {
