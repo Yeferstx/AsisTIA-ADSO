@@ -14,6 +14,7 @@ VECES_PARA_CONFIRMAR = 12  # veces seguidas para confirmar
 TAMANO_MINIMO = 200  # caras mas pequenas no se tienen en cuenta (estan lejos y salen DESCONOCIDO)
 TOPIC_REGISTRO = "sena/asistencia/registro"
 TOPIC_PRESENCIA = "sena/asistencia/presencia"
+TOPIC_EQUIPO = "sena/asistencia/equipos/camara"  # el panel muestra si la camara esta conectada
 SEGUNDOS_CAMARA = 20  # si no ve a nadie en este tiempo se apaga la camara
 # 0 = camara del portatil, o la direccion de DroidCam para usar la del celular
 CAMARA = "http://192.168.101.3:4747/video"
@@ -27,6 +28,7 @@ def al_conectar(cliente, datos, banderas, codigo, propiedades):
     if codigo == 0:
         print("Conectado al broker MQTT")
         cliente.subscribe(TOPIC_PRESENCIA)
+        cliente.publish(TOPIC_EQUIPO, "CONECTADA", qos=1, retain=True)
     else:
         print(f"No se pudo conectar al broker: {codigo}")
 
@@ -47,7 +49,9 @@ cliente.username_pw_set(os.getenv("MQTT_USUARIO"), os.getenv("MQTT_CLAVE"))
 cliente.tls_set()
 cliente.on_connect = al_conectar
 cliente.on_message = al_recibir
-cliente.connect(os.getenv("MQTT_HOST"), int(os.getenv("MQTT_PUERTO")))
+# testamento: si el programa se cierra de golpe o se cae el internet, el broker avisa DESCONECTADA
+cliente.will_set(TOPIC_EQUIPO, "DESCONECTADA", qos=1, retain=True)
+cliente.connect(os.getenv("MQTT_HOST"), int(os.getenv("MQTT_PUERTO")), keepalive=15)
 cliente.loop_start()
 
 
@@ -188,6 +192,8 @@ while True:
     if cv2.waitKey(1) == 27:
         break
 
+# al cerrar normal (con Esc) el testamento no se usa, por eso se avisa aca
+cliente.publish(TOPIC_EQUIPO, "DESCONECTADA", qos=1, retain=True).wait_for_publish(3)
 cliente.loop_stop()
 cliente.disconnect()
 if camara is not None:

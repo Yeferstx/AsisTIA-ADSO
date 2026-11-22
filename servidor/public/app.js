@@ -86,9 +86,20 @@ async function actualizar() {
     document.body.classList.remove('cargando');
     document.getElementById('enVivo').className = 'en-vivo conectado';
     document.getElementById('textoConexion').textContent = 'En vivo';
+    mostrarEquipo('equipoCamara', datos.equipos.camara);
+    mostrarEquipo('equipoMaqueta', datos.equipos.maqueta);
   } catch (error) {
     document.getElementById('enVivo').className = 'en-vivo sin-conexion';
     document.getElementById('textoConexion').textContent = 'Sin conexion';
+  }
+}
+
+// punto verde si el equipo esta conectado y rojo si no
+function mostrarEquipo(id, estado) {
+  if (estado == 'CONECTADA') {
+    document.getElementById(id).className = 'en-vivo conectado';
+  } else {
+    document.getElementById(id).className = 'en-vivo sin-conexion';
   }
 }
 

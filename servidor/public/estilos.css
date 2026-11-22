@@ -118,6 +118,14 @@ body.oscuro .boton-tema {
   color: var(--suave);
 }
 
+/* en vivo, camara y maqueta en una sola fila */
+.conexiones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+}
+
 .punto {
   display: inline-block;
   width: 9px;

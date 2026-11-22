@@ -32,6 +32,7 @@ const char* TOPIC_CONTEO = "sena/asistencia/conteo";
 const char* TOPIC_CONTROL = "sena/asistencia/control";
 const char* TOPIC_LED = "sena/asistencia/led";
 const char* TOPIC_LED_ESTADO = "sena/asistencia/led/estado";
+const char* TOPIC_EQUIPO = "sena/asistencia/equipos/maqueta";  // el panel muestra si la maqueta esta conectada
 
 WiFiClientSecure clienteWifi;
 PubSubClient clienteMqtt(clienteWifi);
@@ -211,8 +212,10 @@ void conectarMqtt() {
   while (!clienteMqtt.connected()) {
     mostrar("Conectando", "MQTT...");
     String id = "esp32-puerta-" + String(random(0xffff), HEX);
-    if (clienteMqtt.connect(id.c_str(), MQTT_USUARIO, MQTT_CLAVE)) {
+    // testamento: si el esp32 se apaga o pierde el wifi, el broker avisa DESCONECTADA
+    if (clienteMqtt.connect(id.c_str(), MQTT_USUARIO, MQTT_CLAVE, TOPIC_EQUIPO, 1, true, "DESCONECTADA")) {
       Serial.println("Conectado a MQTT");
+      clienteMqtt.publish(TOPIC_EQUIPO, "CONECTADA", true);
       clienteMqtt.subscribe(TOPIC_REGISTRO);
       clienteMqtt.subscribe(TOPIC_CONTROL);
       clienteMqtt.subscribe(TOPIC_LED);
