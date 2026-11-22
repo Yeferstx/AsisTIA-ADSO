@@ -15,6 +15,7 @@ import {
 
 const TOPIC_REGISTRO = 'sena/asistencia/registro';
 const TOPIC_CONTROL = 'sena/asistencia/control';
+const TOPIC_EQUIPOS = 'sena/asistencia/equipos/';
 
 interface Aprendiz {
   nombre: string;
@@ -29,6 +30,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   chatGrupo = Number(process.env.TELEGRAM_GRUPO);
   // aprendices que estan pidiendo permiso, se guarda en que pregunta van
   pidiendoPermiso: any = {};
+  // si la camara y la maqueta estan conectadas (lo avisa el broker MQTT)
+  equipos: any = { camara: 'DESCONECTADA', maqueta: 'DESCONECTADA' };
 
   onModuleInit() {
     this.bot = new TelegramBot(process.env.TELEGRAM_TOKEN || '', { polling: true });
@@ -108,7 +111,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     this.clienteMqtt.on('connect', () => {
       console.log('Bot conectado al broker MQTT');
-      this.clienteMqtt.subscribe([TOPIC_REGISTRO, TOPIC_CONTROL]);
+      this.clienteMqtt.subscribe([TOPIC_REGISTRO, TOPIC_CONTROL, TOPIC_EQUIPOS + '+']);
     });
 
     this.clienteMqtt.on('message', (topic, datos) => {
@@ -120,11 +123,28 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           console.log(`Registro invalido: ${mensaje}`);
         }
       }
-      // si cierran desde el tactil tambien se cierra aca
+      // si cierran desde el tactil tambien se cierra aca, pero solo en horario de clase
+      // (asi un toque sin querer en la noche no les manda mensajes a los aprendices)
       if (topic === TOPIC_CONTROL && mensaje === 'CERRAR') {
-        this.cierreAutomatico();
+        if (this.enHorarioDeClase()) {
+          this.cierreAutomatico();
+        } else {
+          console.log('Se ignoro el cierre del tactil porque esta fuera del horario de clase');
+        }
+      }
+      // ejemplo: sena/asistencia/equipos/camara -> CONECTADA
+      if (topic.startsWith(TOPIC_EQUIPOS)) {
+        const equipo = topic.replace(TOPIC_EQUIPOS, '');
+        this.equipos[equipo] = mensaje;
+        console.log(`Equipo ${equipo}: ${mensaje}`);
       }
     });
+  }
+
+  enHorarioDeClase() {
+    const horario = leerHorario();
+    const ahora = new Date().toTimeString().slice(0, 5);
+    return ahora >= horario.apertura && ahora <= horario.cierre;
   }
 
   // con try para que no se caiga el servidor
@@ -418,6 +438,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     return {
       fecha: hoy,
       cerrada: dia.cerrada,
+      equipos: this.equipos,
       llegadas: dia.registros.filter((r: Registro) => r.estado != 'AUSENTE'),
       aTiempo: resumen.aTiempo.length,
       tardes: resumen.tardes.length,
